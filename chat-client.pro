@@ -12,15 +12,18 @@ CONFIG += c++11
 SOURCES += \
     chat_client.cpp \
     chat_user.cpp \
+    crc32.cpp \
     main.cpp \
     main_window.cpp \
-    socket_tcp.cpp
+    socket_udp.cpp
 
 HEADERS += \
     chat_client.h \
     chat_user.h \
+    crc32.h \
     main_window.h \
-    socket_tcp.h
+    packet_udp.h \
+    socket_udp.h
 
 FORMS += \
     main_window.ui

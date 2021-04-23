@@ -1,8 +1,6 @@
 #ifndef CHATUSER_H
 #define CHATUSER_H
 
-#define MAX_FRIEND_COUNT 31
-
 #include <QString>
 #include <QVector>
 

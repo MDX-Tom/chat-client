@@ -1,7 +1,7 @@
 #include "chat_client.h"
 
 #include "chat_user.h"
-#include "socket_tcp.h"
+#include "socket_udp.h"
 
 #include <QJsonDocument>
 
@@ -11,7 +11,7 @@ using ChatMessage::ServerMsgType;
 
 ChatClient::ChatClient()
 {
-    this->socketTCP = new SocketTCP(this->serverIP, this->serverPort);
+    this->socketUDP = new SocketUDP();
     this->user = new ChatUser("99999", "pswd_99999", "name_99999", new QVector<QString>());
     this->chatDialogs = new QMap<QString, QListWidget*>();
 
@@ -33,7 +33,7 @@ ChatClient::~ChatClient()
     delete this->chatDialogs;
     delete this->jsonSendMsg;
     delete this->user;
-    delete this->socketTCP;
+    delete this->socketUDP;
 }
 
 
@@ -72,7 +72,7 @@ bool ChatClient::Login(QString id, QString password)
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
     // 通过Socket发送Json请求串
-    return this->socketTCP->SendTextMsg(jsonStr);
+    return this->socketUDP->SendTextMsg(jsonStr);
 }
 
 
@@ -97,7 +97,7 @@ bool ChatClient::Logout()
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
     // 通过Socket发送Json请求串
-    return this->socketTCP->SendTextMsg(jsonStr);
+    return this->socketUDP->SendTextMsg(jsonStr);
 }
 
 
@@ -126,7 +126,7 @@ bool ChatClient::SendChatContent(QString targetUserID, int contentType, QString 
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
     // 通过Socket发送Json请求串
-    return this->socketTCP->SendTextMsg(jsonStr);
+    return this->socketUDP->SendTextMsg(jsonStr);
 }
 
 
@@ -151,5 +151,5 @@ bool ChatClient::SendChatRequest()
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
     // 通过Socket发送Json请求串
-    return this->socketTCP->SendTextMsg(jsonStr);
+    return this->socketUDP->SendTextMsg(jsonStr);
 }

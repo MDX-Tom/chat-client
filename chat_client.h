@@ -2,7 +2,7 @@
 #define CHAT_CLIENT_H
 
 #include "chat_user.h"
-#include "socket_tcp.h"
+#include "socket_udp.h"
 
 #include <QJsonObject>
 #include <QListWidget>
@@ -12,7 +12,7 @@ namespace ChatMessage
 {
     enum ChatContentType
     {
-        TEXT = 0,
+        TEXT = 0, FILE = 1,
     };
 
     enum ClientMsgType
@@ -24,7 +24,7 @@ namespace ChatMessage
 
     enum ServerMsgType
     {
-        // CHAT_CONTENT_SERVER = 0,
+        CHAT_CONTENT_SERVER = 0,
         LOGIN_REPLY = 2, LOGOUT_REPLY = 3,
         CHAT_REQUEST_REPLY = 99
     };
@@ -39,12 +39,10 @@ public:
     ChatClient();
     ~ChatClient();
 
-    const QString serverIP = "10.128.206.236";
-    const short serverPort = 8002;
     const short fetchNewContentIntervalMs = 2000;
 
     ChatUser* user;
-    SocketTCP* socketTCP;
+    SocketUDP* socketUDP;
     QJsonObject* jsonSendMsg;
     QMap<QString, QListWidget*>* chatDialogs;
 
