@@ -1,5 +1,8 @@
 #include "socket_udp.h"
+#include "packet_udp.h"
+#include "crc32.h"
 
+#include <QObject>
 #include <QByteArray>
 #include <QHostInfo>
 #include <QHostAddress>
@@ -23,7 +26,7 @@ SocketUDP::SocketUDP()
     }
     catch (...)
     {
-        qDebug() << "Not connected..." << Qt::endl;
+        qDebug() << "Network not connected..." << Qt::endl;
     }
 
     // 创建UDPsocket并启用监听
@@ -32,6 +35,9 @@ SocketUDP::SocketUDP()
     this->thisPort = this->clientPort;
 
     this->receivedData = "";
+
+    // 处理接收信号槽
+    QObject::connect(this->uSocket, SIGNAL(readyRead()), this, SLOT(on_ReceiveData()));
 }
 
 
@@ -70,10 +76,9 @@ void SocketUDP::on_receiveData()
     }
 
     // 读入信息
-    QNetworkDatagram dgram = this->uSocket->receiveDatagram(this->maxPayloadSize);
-    this->receivedAddr = dgram.senderAddress();
-    this->receivedPort = dgram.senderPort();
-    this->receivedData = dgram.data();
+    this->receivedData.resize(this->uSocket->pendingDatagramSize());
+    this->uSocket->readDatagram(this->receivedData.data(), this->receivedData.size(),
+                                &this->receivedAddr, &this->receivedPort);
 
     if (this->receivedData.isEmpty())
     {

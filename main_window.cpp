@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 创建一个Chat客户端主控实例
     this->chatClient = new ChatClient();
 
-    connect(this->chatClient->socketTCP, SIGNAL(on_receivedData()),
+    QObject::connect(this->chatClient->socketUDP, SIGNAL(on_receivedData()),
             this, SLOT(handle_socketReceivedData()));
 
     // 设定Login状态指示文字的状态

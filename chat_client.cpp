@@ -2,12 +2,13 @@
 
 #include "chat_user.h"
 #include "socket_udp.h"
+#include "chat_packet_udp.h"
 
 #include <QJsonDocument>
 
-using ChatMessage::ChatContentType;
-using ChatMessage::ClientMsgType;
-using ChatMessage::ServerMsgType;
+using ChatPacketUDP::ChatContentType;
+using ChatPacketUDP::ClientMsgType;
+using ChatPacketUDP::ServerMsgType;
 
 ChatClient::ChatClient()
 {

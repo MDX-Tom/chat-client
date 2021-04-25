@@ -19,10 +19,10 @@ SOURCES += \
 
 HEADERS += \
     chat_client.h \
+    chat_packet_udp.h \
     chat_user.h \
     crc32.h \
     main_window.h \
-    packet_udp.h \
     socket_udp.h
 
 FORMS += \

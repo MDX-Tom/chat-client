@@ -8,27 +8,6 @@
 #include <QListWidget>
 #include <QMap>
 
-namespace ChatMessage
-{
-    enum ChatContentType
-    {
-        TEXT = 0, FILE = 1,
-    };
-
-    enum ClientMsgType
-    {
-        CHAT_CONTENT_CLIENT = 0,
-        LOGIN_REQUEST = 2, LOGOUT_REQUEST = 3,
-        CHAT_REQUEST = 99,
-    };
-
-    enum ServerMsgType
-    {
-        CHAT_CONTENT_SERVER = 0,
-        LOGIN_REPLY = 2, LOGOUT_REPLY = 3,
-        CHAT_REQUEST_REPLY = 99
-    };
-}
 
 class ChatClient
 {
@@ -39,11 +18,11 @@ public:
     ChatClient();
     ~ChatClient();
 
-    const short fetchNewContentIntervalMs = 2000;
+    const short fetchNewContentIntervalMs = 1000;
 
     ChatUser* user;
     SocketUDP* socketUDP;
-    QJsonObject* jsonSendMsg;
+
     QMap<QString, QListWidget*>* chatDialogs;
 
     bool Login(QString id, QString password);
