@@ -33,7 +33,7 @@ namespace ChatPacketUDP
         quint8 targetUserID;
         quint8 contentType = ChatContentType::TEXT;
 
-        quint32 payloadCrc32;
+        quint32 contentCrc32;
     };
 
     struct FileMsgHeader
@@ -49,7 +49,7 @@ namespace ChatPacketUDP
         quint32 packetCountTotal;
         quint32 packetCountCurrent;
 
-        quint32 payloadCrc32;
+        quint32 contentCrc32;
     };
 }
 

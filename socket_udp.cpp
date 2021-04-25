@@ -1,5 +1,5 @@
 #include "socket_udp.h"
-#include "packet_udp.h"
+#include "chat_packet_udp.h"
 #include "crc32.h"
 
 #include <QObject>
@@ -66,6 +66,13 @@ QByteArray SocketUDP::GetReceivedData()
 }
 
 
+/// 发送消息
+void SocketUDP::SendFilePacketThread::run()
+{
+
+}
+
+
 /// readyRead()的槽函数
 void SocketUDP::on_receiveData()
 {
@@ -90,4 +97,38 @@ void SocketUDP::on_receiveData()
     emit this->on_receivedData();
 }
 
+
+/// 发送字节（单包！）
+bool SocketUDP::SendBytes(QByteArray& bytes, QHostAddress& targetAddr, quint16& targetPort)
+{
+    if (bytes.size() >= this->maxPayloadSize)
+    {
+        qDebug().noquote() << "SendBytes() can only send QByteArray with MAXIMUM SIZE OF: "
+                           << this->maxPayloadSize << " Bytes..." << Qt::endl;
+        return false;
+    }
+
+
+
+    return true;
+}
+bool SocketUDP::SendBytes(QByteArray &bytes)
+{
+    QHostAddress a = this->serverAddr;
+    quint16 p = this->serverPort;
+    return SendBytes(bytes, a, p);
+}
+
+
+/// 发送文件
+bool SocketUDP::SendFile(QString &fileNameWithPath, QHostAddress &targetAddr, quint16 &targetPort)
+{
+
+}
+bool SocketUDP::SendFile(QString &fileNameWithPath)
+{
+    QHostAddress a = this->serverAddr;
+    quint16 p = this->serverPort;
+    return SendFile(fileNameWithPath, a, p);
+}
 

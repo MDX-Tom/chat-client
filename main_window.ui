@@ -148,7 +148,7 @@
       <x>260</x>
       <y>40</y>
       <width>611</width>
-      <height>401</height>
+      <height>391</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -164,7 +164,7 @@
         <x>0</x>
         <y>1</y>
         <width>601</width>
-        <height>361</height>
+        <height>351</height>
        </rect>
       </property>
       <property name="flow">
@@ -277,9 +277,9 @@
     <property name="geometry">
      <rect>
       <x>260</x>
-      <y>450</y>
+      <y>440</y>
       <width>491</width>
-      <height>61</height>
+      <height>71</height>
      </rect>
     </property>
     <property name="plainText">
@@ -310,6 +310,19 @@
     </property>
     <property name="text">
      <string>关闭当前聊天</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>440</y>
+      <width>101</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>发送文件</string>
     </property>
    </widget>
   </widget>

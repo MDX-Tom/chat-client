@@ -26,7 +26,8 @@ HEADERS += \
     socket_udp.h
 
 FORMS += \
-    main_window.ui
+    main_window.ui \
+    send_file_dialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
