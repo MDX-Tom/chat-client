@@ -10,7 +10,7 @@
 #include <QSpacerItem>
 
 
-using ChatMessage::ChatContentType;
+using ::ChatContentType;
 using ChatMessage::ClientMsgType;
 using ChatMessage::ServerMsgType;
 

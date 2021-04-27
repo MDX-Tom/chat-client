@@ -17,22 +17,12 @@ ChatClient::ChatClient()
     this->chatDialogs = new QMap<QString, QListWidget*>();
 
     this->loggedIn = false;
-
-    // jsonMsg模版
-    this->jsonSendMsg = new QJsonObject();
-    this->jsonSendMsg->insert("thisUserID", QJsonValue("00001"));
-    this->jsonSendMsg->insert("msgType", QJsonValue(ClientMsgType::CHAT_CONTENT_CLIENT));
-
-    this->jsonSendMsg->insert("targetUserID", QJsonValue("00002"));
-    this->jsonSendMsg->insert("contentType", QJsonValue(ChatContentType::TEXT));
-    this->jsonSendMsg->insert("content", QJsonValue("This is a test message from user 00001."));
 }
 
 
 ChatClient::~ChatClient()
 {
     delete this->chatDialogs;
-    delete this->jsonSendMsg;
     delete this->user;
     delete this->socketUDP;
 }
@@ -72,8 +62,8 @@ bool ChatClient::Login(QString id, QString password)
     QJsonDocument jsonDoc = QJsonDocument(*this->jsonSendMsg);
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
-    // 通过Socket发送Json请求串
-    return this->socketUDP->SendTextMsg(jsonStr);
+    // 通过Socket发送请求Packet
+    return this->socketUDP->SendBytes();
 }
 
 
@@ -97,8 +87,8 @@ bool ChatClient::Logout()
     QJsonDocument jsonDoc = QJsonDocument(*this->jsonSendMsg);
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
-    // 通过Socket发送Json请求串
-    return this->socketUDP->SendTextMsg(jsonStr);
+    // 通过Socket发送请求Packet
+    return this->socketUDP->SendBytes();
 }
 
 
@@ -126,8 +116,8 @@ bool ChatClient::SendChatContent(QString targetUserID, int contentType, QString 
     QJsonDocument jsonDoc = QJsonDocument(*this->jsonSendMsg);
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
-    // 通过Socket发送Json请求串
-    return this->socketUDP->SendTextMsg(jsonStr);
+    // 通过Socket发送请求Packet
+    return this->socketUDP->SendBytes();
 }
 
 
@@ -151,6 +141,6 @@ bool ChatClient::SendChatRequest()
     QJsonDocument jsonDoc = QJsonDocument(*this->jsonSendMsg);
     QString jsonStr = QString(jsonDoc.toJson(QJsonDocument::Compact)); // 紧凑型输出，节省网络资源
 
-    // 通过Socket发送Json请求串
-    return this->socketUDP->SendTextMsg(jsonStr);
+    // 通过Socket发送请求Packet
+    return this->socketUDP->SendBytes();
 }

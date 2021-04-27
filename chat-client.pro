@@ -15,6 +15,7 @@ SOURCES += \
     crc32.cpp \
     main.cpp \
     main_window.cpp \
+    send_file_dialog.cpp \
     socket_udp.cpp
 
 HEADERS += \
@@ -23,6 +24,7 @@ HEADERS += \
     chat_user.h \
     crc32.h \
     main_window.h \
+    send_file_dialog.h \
     socket_udp.h
 
 FORMS += \

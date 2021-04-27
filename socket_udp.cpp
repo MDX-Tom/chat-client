@@ -4,9 +4,11 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QFile>
 #include <QHostInfo>
 #include <QHostAddress>
 #include <QNetworkDatagram>
+#include <QTimer>
 #include <QDebug>
 
 
@@ -66,13 +68,6 @@ QByteArray SocketUDP::GetReceivedData()
 }
 
 
-/// 发送消息
-void SocketUDP::SendFilePacketThread::run()
-{
-
-}
-
-
 /// readyRead()的槽函数
 void SocketUDP::on_receiveData()
 {
@@ -93,42 +88,147 @@ void SocketUDP::on_receiveData()
         return;
     }
 
-    // 发送信号通知mainWindow，服务器data已经被读入
+    // ACK信息
+    if (ChatPacketUDP::isPacketReplyMsg(this->receivedData))
+    {
+        ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)this->receivedData.data();
+        emit this->on_receivedACK(ackHeader.md5Hash);
+        return;
+    }
+
+    // 发送信号，服务器data已经被读入
     emit this->on_receivedData();
 }
 
 
-/// 发送字节（单包！）
-bool SocketUDP::SendBytes(QByteArray& bytes, QHostAddress& targetAddr, quint16& targetPort)
+void SocketUDP::on_receivedACK(unsigned char* md5Hash)
 {
-    if (bytes.size() >= this->maxPayloadSize)
+    this->receivedACKHash.resize(16);
+    memcpy(this->receivedACKHash.data(), md5Hash, 16);
+}
+
+
+/// 直接发送字节流（单包）
+bool SocketUDP::SendPackedBytes
+                         (QByteArray& bytes,
+                          QHostAddress targetAddr,
+                          quint16 targetPort,
+                          quint8 retrySeq)
+{
+    // 重发次数超过MAX
+    if (retrySeq >= this->retryCountMax)
     {
-        qDebug().noquote() << "SendBytes() can only send QByteArray with MAXIMUM SIZE OF: "
-                           << this->maxPayloadSize << " Bytes..." << Qt::endl;
+        throw "网络错误：连接超时。重传次数已达：" + QString(this->retryCountMax);
         return false;
     }
 
+    // 确认为单包
+    if (bytes.size() > this->maxPayloadSize)
+    {
+        throw "SendBytes() can only send QByteArray with MAXIMUM SIZE OF: " +
+                QString(this->maxPayloadSize) + " Bytes...";
+        return false;
+    }
 
+    // 发送前计算MD5Hash
+    QByteArray md5Hash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
+
+    // 发送
+    this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
+
+    // 等待回包
+    bool toggleTimeout = false;
+    bool ackValid = false;
+    QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
+    while (!toggleTimeout)
+    {
+        if (this->receivedACKHash == md5Hash)
+        {
+            ackValid = true;
+            break;
+        }
+    }
+
+    // 判断是否需要重传
+    if (!ackValid)
+    {
+        this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
+    }
 
     return true;
 }
-bool SocketUDP::SendBytes(QByteArray &bytes)
+bool SocketUDP::SendPackedBytes(QByteArray &bytes)
 {
     QHostAddress a = this->serverAddr;
     quint16 p = this->serverPort;
-    return SendBytes(bytes, a, p);
+    return SendPackedBytes(bytes, a, p, 0);
 }
 
 
 /// 发送文件
-bool SocketUDP::SendFile(QString &fileNameWithPath, QHostAddress &targetAddr, quint16 &targetPort)
+bool SocketUDP::SendFile
+                        (QString &fileNameWithPath,
+                         QHostAddress targetAddr,
+                         quint16 targetPort,
+                         quint16 targetUserID = 0,
+                         quint16 fromUserID = 1)
 {
+    qDebug().noquote() << "Selected file: " << fileNameWithPath << Qt::endl;
 
+    // 打开文件
+    QFile file(fileNameWithPath);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        throw "打开文件失败...";
+        return false;
+    }
+
+    // 计算分包个数
+    qint64 bytesTotal = file.size(); // 文件总字节数
+    if (bytesTotal >= INT32_MAX)
+    {
+        throw "文件过大，最大只支持4GB...";
+        return false;
+    }
+    qint16 bytesCountPerPacket = this->maxPayloadSize - sizeof(ChatPacketUDP::FileMsgHeader); // 单包包含的文件字节数
+    qint16 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
+
+    // 分包发送
+    for (int i = 0; i < packetCountTotal; i++)
+    {
+        // 处理包头
+        ChatPacketUDP::FileMsgHeader header;
+        header.packetSize = header.headerSize + bytesCountPerPacket; // == this->maxPayloadSize
+        header.fromUserID = fromUserID;
+        header.targetUserID = targetUserID;
+        header.packetCountTotal = packetCountTotal;
+        header.packetCountCurrent = i + 1;
+
+        // 写入包头到QByteArray
+        QByteArray bytesPacket;
+        bytesPacket.resize(header.packetSize);
+        memcpy(bytesPacket.data(), &header, sizeof(header)); // sizeof(header) == header.headerSize
+
+        // 将文件内容写入到QByteArray
+        QByteArray bytesFile = file.read(bytesCountPerPacket);
+        memcpy(bytesFile.data(), &header, bytesFile.size()); // bytesFile.size() == bytesCountPerPacket
+
+        // 更新进度指示信号
+        float progress = 1.0 * i / packetCountTotal;
+        emit this->sendFileProgress(progress);
+
+        this->SendPackedBytes(bytesPacket, targetAddr, targetPort, 0);
+    }
+
+    return true;
 }
-bool SocketUDP::SendFile(QString &fileNameWithPath)
+bool SocketUDP::SendFile
+                        (QString &fileNameWithPath,
+                         quint16 targetUserID = 0,
+                         quint16 thisUserID = 1)
 {
     QHostAddress a = this->serverAddr;
     quint16 p = this->serverPort;
-    return SendFile(fileNameWithPath, a, p);
+    return SendFile(fileNameWithPath, a, p, targetUserID, thisUserID);
 }
 
