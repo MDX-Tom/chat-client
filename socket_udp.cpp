@@ -131,7 +131,7 @@ bool SocketUDP::SendPackedBytes
     }
 
     // 发送前计算MD5Hash
-    QByteArray md5Hash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
+    QByteArray sentHash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
 
     // 发送
     this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
@@ -142,7 +142,8 @@ bool SocketUDP::SendPackedBytes
     QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
     while (!toggleTimeout)
     {
-        if (this->receivedACKHash == md5Hash)
+        // 校验收到的包
+        if (this->receivedACKHash == sentHash)
         {
             ackValid = true;
             break;
@@ -152,7 +153,7 @@ bool SocketUDP::SendPackedBytes
     // 判断是否需要重传
     if (!ackValid)
     {
-        this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
+        return this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
     }
 
     return true;
@@ -180,6 +181,7 @@ bool SocketUDP::SendFile
     if (!file.open(QIODevice::ReadOnly))
     {
         throw "打开文件失败...";
+        file.close();
         return false;
     }
 
@@ -188,6 +190,7 @@ bool SocketUDP::SendFile
     if (bytesTotal >= INT32_MAX)
     {
         throw "文件过大，最大只支持4GB...";
+        file.close();
         return false;
     }
     qint16 bytesCountPerPacket = this->maxPayloadSize - sizeof(ChatPacketUDP::FileMsgHeader); // 单包包含的文件字节数
@@ -219,6 +222,8 @@ bool SocketUDP::SendFile
 
         this->SendPackedBytes(bytesPacket, targetAddr, targetPort, 0);
     }
+
+    file.close();
 
     return true;
 }

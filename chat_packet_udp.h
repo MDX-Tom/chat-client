@@ -35,6 +35,18 @@ namespace ChatPacketUDP
         quint8 msgType;
     };
 
+    //------------------------CLIENT HEADERS-------------------------//
+
+    struct LoginRequestHeader
+    {
+        quint16 headerSize = sizeof(LoginRequestHeader); // in bytes
+        quint16 packetSize; // in bytes (= headerSize + payloadSize)
+        quint8 msgType = ClientMsgType::LOGIN_REQUEST;
+
+        quint16 thisUserID;
+        quint8 password[25];
+    };
+
     struct TextMsgHeader
     {
         quint16 headerSize = sizeof(TextMsgHeader); // in bytes
@@ -60,6 +72,13 @@ namespace ChatPacketUDP
         quint32 packetCountTotal;
         quint32 packetCountCurrent;
     };
+
+    struct ChatRequestHeader
+    {
+
+    };
+
+    //------------------------SERVER HEADERS-------------------------//
 
     struct PacketReplyHeader
     {
