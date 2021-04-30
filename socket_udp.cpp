@@ -88,7 +88,7 @@ void SocketUDP::on_receiveData()
         return;
     }
 
-    // ACK信息
+    // CHAT_CONTENT ACK信息
     if (ChatPacketUDP::isPacketReplyMsg(this->receivedData))
     {
         ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)this->receivedData.data();
@@ -113,7 +113,8 @@ bool SocketUDP::SendPackedBytes
                          (QByteArray& bytes,
                           QHostAddress targetAddr,
                           quint16 targetPort,
-                          quint8 retrySeq)
+                          quint8 retrySeq,
+                          bool requireACK = false)
 {
     // 重发次数超过MAX
     if (retrySeq >= this->retryCountMax)
@@ -130,30 +131,36 @@ bool SocketUDP::SendPackedBytes
         return false;
     }
 
-    // 发送前计算MD5Hash
-    QByteArray sentHash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
+
 
     // 发送
     this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
 
-    // 等待回包
-    bool toggleTimeout = false;
-    bool ackValid = false;
-    QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
-    while (!toggleTimeout)
+    // 接收回包
+    if (requireACK)
     {
-        // 校验收到的包
-        if (this->receivedACKHash == sentHash)
-        {
-            ackValid = true;
-            break;
-        }
-    }
+        // 发送前MD5Hash
+        QByteArray sentHash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
 
-    // 判断是否需要重传
-    if (!ackValid)
-    {
-        return this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
+        // 等待回包
+        bool toggleTimeout = false;
+        bool ackValid = false;
+        QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
+        while (!toggleTimeout)
+        {
+            // 校验收到的包
+            if (this->receivedACKHash == sentHash)
+            {
+                ackValid = true;
+                break;
+            }
+        }
+
+        // 判断是否需要重传
+        if (!ackValid)
+        {
+            return this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
+        }
     }
 
     return true;
@@ -220,7 +227,7 @@ bool SocketUDP::SendFile
         float progress = 1.0 * i / packetCountTotal;
         emit this->sendFileProgress(progress);
 
-        this->SendPackedBytes(bytesPacket, targetAddr, targetPort, 0);
+        this->SendPackedBytes(bytesPacket, targetAddr, targetPort, 0, true);
     }
 
     file.close();

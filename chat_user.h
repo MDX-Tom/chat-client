@@ -7,18 +7,18 @@
 class ChatUser
 {
 private:
-    QString id;
+    quint16 id;
     QString password;
     QString nickName;
-    QVector<QString>* friends;
+    QVector<quint16>* friends;
 
 public:
-    ChatUser(QString id, QString password, QString nickName, QVector<QString>* friends);
+    ChatUser(quint16 id, QString password, QString nickName, QVector<quint16>* friends);
     ~ChatUser();
 
-    QString getID() { return this->id; }
+    quint16 getID() { return this->id; }
     QString getNickName() { return this->nickName; }
-    QVector<QString>* getFriends() { return this->friends; }
+    QVector<quint16>* getFriends() { return this->friends; }
 };
 
 #endif // CHATUSER_H

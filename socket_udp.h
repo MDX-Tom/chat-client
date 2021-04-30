@@ -62,7 +62,7 @@ public:
     quint16 GetReceivedPort();
     QByteArray GetReceivedData();
 
-    bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort, quint8 retrySeq);
+    bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort, quint8 retrySeq, bool requireACK = false);
     bool SendPackedBytes(QByteArray& bytesPacked);
 
     bool SendFile(QString& fileNameWithPath, QHostAddress targetAddr, quint16 targetPort, quint16 targetUserID, quint16 thisUserID);

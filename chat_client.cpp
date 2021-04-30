@@ -13,7 +13,7 @@ using ChatPacketUDP::ServerMsgType;
 ChatClient::ChatClient()
 {
     this->socketUDP = new SocketUDP();
-    this->user = new ChatUser("99999", "pswd_99999", "name_99999", new QVector<QString>());
+    this->user = new ChatUser(00000, "pswd_00000", "name_00000", new QVector<quint16>());
     this->chatDialogs = new QMap<QString, QListWidget*>();
 
     this->loggedIn = false;

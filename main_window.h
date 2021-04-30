@@ -32,10 +32,6 @@ private:
 
     virtual void timerEvent(QTimerEvent* event);
 
-    void chatContentHandler(QJsonObject&);
-    void loginReplyHandler(QJsonObject&);
-    void logoutReplyHandler(QJsonObject&);
-
     void RefreshBtnFriendsView();
     void AddTabChatView(QString& tabTitle, QString& friendUserID);
     void DelCurrentTabChatView();

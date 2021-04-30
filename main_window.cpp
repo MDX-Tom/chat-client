@@ -10,11 +10,6 @@
 #include <QSpacerItem>
 
 
-using ::ChatContentType;
-using ChatMessage::ClientMsgType;
-using ChatMessage::ServerMsgType;
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -113,9 +108,9 @@ void MainWindow::RefreshBtnFriendsView()
     // 将好友列表添加进去
     for (int i = this->chatClient->user->getFriends()->count() - 1; i >= 0; i--)
     {
-        QString friendID = this->chatClient->user->getFriends()->at(i);
+        quint16 friendID = this->chatClient->user->getFriends()->at(i);
         QPushButton* btnFriend = new QPushButton();
-        btnFriend->setText("朋友：" + friendID);
+        btnFriend->setText("朋友：" + QString(friendID));
         btnFriend->setProperty("friendID", friendID); // 绑定这个按钮和好友ID
         btnFriend->setProperty("friendIDIndex", i); // 绑定这个按钮和好友序号
 
@@ -153,7 +148,7 @@ void MainWindow::DelCurrentTabChatView()
     QTabWidget* tabView = this->ui->tabChatView;
 
     QWidget* tab = this->ui->tabChatView->currentWidget();
-    QString friendID = tab->property("friendID").toString();
+    quint16 friendID = tab->property("friendID").toUInt();
     tabView->removeTab(this->ui->tabChatView->currentIndex());
     delete tab;
 

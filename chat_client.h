@@ -25,12 +25,15 @@ public:
 
     QMap<QString, QListWidget*>* chatDialogs;
 
-    bool Login(QString id, QString password);
+    bool Login(quint16 id, QString password);
     bool LoggedIn();
     void SetLoginStatus(bool);
     bool Logout();
 
-    bool SendChatContent(QString targetUserID, int contentType, QString content);
+    bool SendText(QString textContent, quint16 targetUserID);
+    bool SendFile(QString& fileNameWithPath, QHostAddress targetAddr, quint16 targetPort, quint16 targetUserID);
+    bool SendFile(QString& fileNameWithPath, quint16 targetUserID);
+
     bool SendChatRequest();
 };
 
