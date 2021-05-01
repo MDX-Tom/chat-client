@@ -7,6 +7,8 @@ ChatUser::ChatUser(quint16 id, QString password, QString nickName, QVector<quint
 
     this->nickName = nickName;
     this->friends = friends;
+
+    this->loggedIn = false;
 }
 
 ChatUser::~ChatUser()

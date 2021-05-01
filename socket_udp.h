@@ -48,7 +48,6 @@ private:
 
 signals:
     void on_receivedData(); // 信号先由socket传递给本类，从缓冲区读取完成后再发信号通知mainWindow取走
-    void sendFileProgress(float); // 指示文件发送进度
     void on_receivedACK(unsigned char*); // 收到了ACK信息
 
 private slots:
@@ -62,11 +61,13 @@ public:
     quint16 GetReceivedPort();
     QByteArray GetReceivedData();
 
-    bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort, quint8 retrySeq, bool requireACK = false);
-    bool SendPackedBytes(QByteArray& bytesPacked);
+    quint16 MaxPacketSize() { return this->maxPayloadSize; }
+    quint16 WaitForReplyMs() { return this->waitForReplyMs; }
+    QHostAddress ServerAddr() { return this->serverAddr; }
+    quint16 ServerPort() { return this->serverPort; }
 
-    bool SendFile(QString& fileNameWithPath, QHostAddress targetAddr, quint16 targetPort, quint16 targetUserID, quint16 thisUserID);
-    bool SendFile(QString& fileNameWithPath, quint16 targetUserID, quint16 thisUserID);
+    bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort, bool requireACK = false, quint8 retrySeq = 0);
+    bool SendPackedBytes(QByteArray& bytesPacked);
 };
 
 

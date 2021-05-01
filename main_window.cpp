@@ -1,9 +1,6 @@
 #include "main_window.h"
 #include "ui_main_window.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
 #include <QString>
 #include <QDebug>
 #include <QMessageBox>
@@ -47,28 +44,12 @@ MainWindow::MainWindow(QWidget *parent)
         this->ui->tabChatView->removeTab(0);
         delete tab;
     }
-
-    // 定时请求新消息
-    startTimer(this->chatClient->fetchNewContentIntervalMs); // ms
 }
 
 
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-
-/// 定时向服务器获取新消息
-void MainWindow::timerEvent(QTimerEvent *event)
-{
-    if (!this->chatClient->LoggedIn())
-    {
-        // 未登录，不请求
-        return;
-    }
-
-    this->chatClient->SendChatRequest();
 }
 
 
@@ -124,7 +105,7 @@ void MainWindow::RefreshBtnFriendsView()
 
 
 /// 用好友刷新Tab显示
-void MainWindow::AddTabChatView(QString& tabTitle, QString& friendID)
+void MainWindow::AddTabChatView(QString& tabTitle, quint16 friendID)
 {
     QTabWidget* tabView = this->ui->tabChatView;
 
@@ -169,7 +150,7 @@ void MainWindow::on_btnFriends()
     }
 
     int friendIDIndex = btn->property("friendIDIndex").toInt();
-    QString friendID = this->chatClient->user->getFriends()->at(friendIDIndex);
+    quint16 friendID = this->chatClient->user->getFriends()->at(friendIDIndex);
     if (friendID != btn->property("friendID").toString())
     {
         qDebug() << "好友列表顺序错误！！！" << Qt::endl;

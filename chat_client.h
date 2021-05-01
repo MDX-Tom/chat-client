@@ -3,34 +3,42 @@
 
 #include "chat_user.h"
 #include "socket_udp.h"
+#include "main_window.h"
 
-#include <QJsonObject>
+#include <QTimerEvent>
 #include <QListWidget>
 #include <QMap>
 
 
-class ChatClient
+class ChatClient : public QObject
 {
-private:
-    bool loggedIn;
+    Q_OBJECT
+
+signals:
+    void sendFileProgress(float); // 指示文件发送进度
 
 public:
-    ChatClient();
+    ChatClient(MainWindow* mainWindow);
     ~ChatClient();
 
     const short fetchNewContentIntervalMs = 1000;
 
+    virtual void timerEvent(QTimerEvent* event);
+
     ChatUser* user;
     SocketUDP* socketUDP;
+    MainWindow* mainWindow;
 
-    QMap<QString, QListWidget*>* chatDialogs;
+    QMap<quint16, QListWidget*>* chatDialogs;
+
+    bool LoggedIn() { return this->user->LoggedIn(); }
+    void SetLoginStatus(bool status) { this->user->SetLoginStatus(status); }
 
     bool Login(quint16 id, QString password);
-    bool LoggedIn();
-    void SetLoginStatus(bool);
     bool Logout();
 
     bool SendText(QString textContent, quint16 targetUserID);
+
     bool SendFile(QString& fileNameWithPath, QHostAddress targetAddr, quint16 targetPort, quint16 targetUserID);
     bool SendFile(QString& fileNameWithPath, quint16 targetUserID);
 

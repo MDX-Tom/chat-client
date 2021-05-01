@@ -12,24 +12,24 @@ namespace ChatPacketUDP
 
     enum ClientMsgType
     {
-        MSG_CLIENT_ACK = 1, // Reliable UDP
+        MSG_CLIENT_ACK = 10, // Reliable UDP
 
-        CHAT_CONTENT_CLIENT = 0,
+        CHAT_CONTENT_CLIENT = 20,
 
-        LOGIN_REQUEST = 2, LOGOUT_REQUEST = 3,
+        LOGIN_REQUEST = 30, LOGOUT_REQUEST = 40,
 
-        CHAT_REQUEST = 99,
+        CHAT_REQUEST = 100,
     };
 
     enum ServerMsgType
     {
-        MSG_SERVER_ACK = 1, // Reliable UDP
+        MSG_SERVER_ACK = 11, // Reliable UDP
 
-        CHAT_CONTENT_SERVER = 0,
+        CHAT_CONTENT_SERVER = 21,
 
-        LOGIN_REPLY = 2, LOGOUT_REPLY = 3,
+        LOGIN_REPLY = 31, LOGOUT_REPLY = 41,
 
-        CHAT_REQUEST_REPLY = 99,
+        CHAT_REQUEST_REPLY = 101,
     };
 
     enum Status
@@ -53,9 +53,9 @@ namespace ChatPacketUDP
 
     struct LoginRequestHeader
     {
-        quint16 headerSize = sizeof(LoginRequestHeader); // in bytes
-        quint16 packetSize; // in bytes (= headerSize + payloadSize)
-        quint8 msgType = ClientMsgType::LOGIN_REQUEST;
+        const quint16 headerSize = sizeof(LoginRequestHeader); // in bytes
+        const quint16 packetSize = sizeof(LoginRequestHeader); // in bytes (= headerSize + payloadSize)
+        const quint8 msgType = ClientMsgType::LOGIN_REQUEST;
 
         quint16 thisUserID;
         quint8 password[25];
@@ -63,33 +63,33 @@ namespace ChatPacketUDP
 
     struct LogoutRequestHeader
     {
-        quint16 headerSize = sizeof(LogoutRequestHeader); // in bytes
-        quint16 packetSize; // in bytes (= headerSize + payloadSize)
-        quint8 msgType = ClientMsgType::LOGOUT_REQUEST;
+        const quint16 headerSize = sizeof(LogoutRequestHeader); // in bytes
+        const quint16 packetSize = sizeof(LogoutRequestHeader); // in bytes (= headerSize + payloadSize)
+        const quint8 msgType = ClientMsgType::LOGOUT_REQUEST;
 
         quint16 thisUserID;
     };
 
     struct TextMsgHeader
     {
-        quint16 headerSize = sizeof(TextMsgHeader); // in bytes
+        const quint16 headerSize = sizeof(TextMsgHeader); // in bytes
         quint16 packetSize; // in bytes (= headerSize + payloadSize)
-        quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
+        const quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
 
         quint16 fromUserID;
         quint16 targetUserID;
-        quint8 contentType = ChatContentType::TEXT;
+        const quint8 contentType = ChatContentType::TEXT;
     };
 
     struct FileMsgHeader
     {
-        quint16 headerSize = sizeof(FileMsgHeader); // in bytes
+        const quint16 headerSize = sizeof(FileMsgHeader); // in bytes
         quint16 packetSize; // in bytes (= headerSize + payloadSize)
-        quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
+        const quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
 
         quint16 fromUserID;
         quint16 targetUserID;
-        quint8 contentType = ChatContentType::FILE;
+        const quint8 contentType = ChatContentType::FILE;
 
         // 分包信息
         quint32 packetCountTotal;
@@ -98,9 +98,9 @@ namespace ChatPacketUDP
 
     struct ChatRequestHeader
     {
-        quint16 headerSize = sizeof(ChatRequestHeader); // in bytes
-        quint16 packetSize; // in bytes (= headerSize + payloadSize)
-        quint8 msgType = ClientMsgType::CHAT_REQUEST;
+        const quint16 headerSize = sizeof(ChatRequestHeader); // in bytes
+        const quint16 packetSize = sizeof(ChatRequestHeader); // in bytes (= headerSize + payloadSize)
+        const quint8 msgType = ClientMsgType::CHAT_REQUEST;
 
         quint16 thisUserID;
     };

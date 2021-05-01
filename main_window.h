@@ -4,7 +4,6 @@
 #include "chat_client.h"
 
 #include <QMainWindow>
-#include <QTimerEvent>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -30,10 +29,8 @@ private:
     Ui::MainWindow *ui;
     ChatClient* chatClient;
 
-    virtual void timerEvent(QTimerEvent* event);
-
     void RefreshBtnFriendsView();
-    void AddTabChatView(QString& tabTitle, QString& friendUserID);
+    void AddTabChatView(QString& tabTitle, quint16 friendUserID);
     void DelCurrentTabChatView();
 };
 
