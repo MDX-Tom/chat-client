@@ -3,8 +3,9 @@
 
 #include <QObject>
 
-namespace ChatPacketUDP
+class ChatPacketUDP
 {
+public:
     enum ChatContentType
     {
         TEXT = 0, FILE = 1,
@@ -119,11 +120,13 @@ namespace ChatPacketUDP
     struct LoginReplyHeader
     {
         const quint16 headerSize = sizeof(LoginReplyHeader);
-        const quint16 packetSize = sizeof(LoginReplyHeader);
+        quint16 packetSize;
         const quint8 msgType = ServerMsgType::LOGIN_REPLY;
 
         quint16 loginUserID;
         quint8 status;
+
+        quint16 friendCount;
     };
 
     struct LogoutReplyHeader
@@ -161,7 +164,7 @@ namespace ChatPacketUDP
 
     //------------------------HEADER FUNCTIONS-------------------------//
 
-    bool isPacketReplyMsg(QByteArray& bytes)
+    static bool isPacketReplyMsg(QByteArray& bytes)
     {
         HeaderBase headerBase = *(HeaderBase*)bytes.data();
         return (headerBase.msgType == ServerMsgType::MSG_SERVER_ACK &&
@@ -169,15 +172,14 @@ namespace ChatPacketUDP
                 headerBase.headerSize == sizeof(PacketReplyHeader));
     }
 
-    bool isLoginReplyMsg(QByteArray& bytes)
+    static bool isLoginReplyMsg(QByteArray& bytes)
     {
         HeaderBase headerBase = *(HeaderBase*)bytes.data();
         return (headerBase.msgType == ServerMsgType::LOGIN_REPLY &&
-                headerBase.headerSize == sizeof(LoginReplyHeader) &&
-                headerBase.packetSize == sizeof(LoginReplyHeader));
+                headerBase.headerSize == sizeof(LoginReplyHeader));
     }
 
-    bool isLogoutReplyMsg(QByteArray& bytes)
+    static bool isLogoutReplyMsg(QByteArray& bytes)
     {
         HeaderBase headerBase = *(HeaderBase*)bytes.data();
         return (headerBase.msgType == ServerMsgType::LOGOUT_REPLY &&
@@ -185,12 +187,12 @@ namespace ChatPacketUDP
                 headerBase.packetSize == sizeof(LogoutReplyHeader));
     }
 
-    bool isChatRequestReplyMsg(QByteArray& bytes)
+    static bool isChatRequestReplyMsg(QByteArray& bytes)
     {
         HeaderBase headerBase = *(HeaderBase*)bytes.data();
         return (headerBase.msgType == ServerMsgType::CHAT_REQUEST_REPLY &&
                 headerBase.headerSize == sizeof(ChatRequestReplyHeader));
     }
-}
+};
 
 #endif // CHAT_PACKET_UDP_H

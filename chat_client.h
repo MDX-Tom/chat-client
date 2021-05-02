@@ -3,22 +3,53 @@
 
 #include "chat_user.h"
 #include "socket_udp.h"
-#include "main_window.h"
+#include "ui_chat_client.h"
+#include "send_file_dialog.h"
 
+#include <QMainWindow>
 #include <QTimerEvent>
 #include <QListWidget>
 #include <QMap>
 
+QT_BEGIN_NAMESPACE
+namespace Ui
+{
+    class MainWindow;
+}
+QT_END_NAMESPACE
 
-class ChatClient : public QObject
+class ChatClient : public QMainWindow
 {
     Q_OBJECT
 
-signals:
-    void sendFileProgress(float); // 指示文件发送进度
+private:
+    // 超时重传等待时间
+    quint16 waitForReplyMs = 100; // 可以添加自适应算法
+    // 超时重传次数
+    const quint8 retryCountMax = 3;
+    // 收到的ACK哈希值
+    QByteArray receivedACKHash;
+
+    Ui::MainWindow *ui;
+    SendFileDialog* sendFileDialog;
+
+    void RefreshBtnFriendsView();
+    void AddTabChatView(QString& tabTitle, quint16 friendUserID);
+    void DelCurrentTabChatView();
+
+public slots:
+    void UDPReceiveHandler();
+
+private slots:
+    void on_btnSubmitUser();
+    void on_btnLogout();
+    void on_btnFriends();
+    void on_btnSendMsg();
+    void on_btnSendFile();
+    void on_btnDelCurrentTab();
 
 public:
-    ChatClient(MainWindow* mainWindow);
+    ChatClient(QWidget *parent = nullptr);
     ~ChatClient();
 
     const short fetchNewContentIntervalMs = 1000;
@@ -27,9 +58,10 @@ public:
 
     ChatUser* user;
     SocketUDP* socketUDP;
-    MainWindow* mainWindow;
 
     QMap<quint16, QListWidget*>* chatDialogs;
+
+    //------------------------基本操作------------------------------
 
     bool LoggedIn() { return this->user->LoggedIn(); }
     void SetLoginStatus(bool status) { this->user->SetLoginStatus(status); }
@@ -43,6 +75,10 @@ public:
     bool SendFile(QString& fileNameWithPath, quint16 targetUserID);
 
     bool SendChatRequest();
+
+    //-------------------------UI 操作-----------------------------
+
+    void RefreshSendFileProgress(float); // 指示文件发送进度
 };
 
 #endif // CHAT_CLIENT_H

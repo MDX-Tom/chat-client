@@ -1,6 +1,5 @@
 #include "socket_udp.h"
 #include "chat_packet_udp.h"
-#include "crc32.h"
 
 #include <QObject>
 #include <QByteArray>
@@ -38,7 +37,8 @@ SocketUDP::SocketUDP()
     this->receivedData = "";
 
     // 处理接收信号槽
-    QObject::connect(this->uSocket, SIGNAL(readyRead()), this, SLOT(on_ReceiveData()));
+    QObject::connect(this->uSocket, SIGNAL(readyRead()),
+                     this, SLOT(on_ReceiveData()));
 }
 
 
@@ -46,24 +46,6 @@ SocketUDP::~SocketUDP()
 {
     this->uSocket->close();
     delete this;
-}
-
-
-QHostAddress SocketUDP::GetReceivedAddr()
-{
-    return this->receivedAddr;
-}
-
-
-quint16 SocketUDP::GetReceivedPort()
-{
-    return this->receivedPort;
-}
-
-
-QByteArray SocketUDP::GetReceivedData()
-{
-    return this->receivedData;
 }
 
 
@@ -87,24 +69,8 @@ void SocketUDP::on_receiveData()
         return;
     }
 
-    // CHAT_CONTENT ACK信息
-    if (ChatPacketUDP::isPacketReplyMsg(this->receivedData))
-    {
-        ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)this->receivedData.data();
-        emit this->on_receivedACK(ackHeader.md5Hash);
-        return;
-    }
-
     // 发送信号，服务器data已经被读入
     emit this->on_receivedData();
-}
-
-
-/// 收到ACK信息
-void SocketUDP::on_receivedACK(unsigned char* md5Hash)
-{
-    this->receivedACKHash.resize(16);
-    memcpy(this->receivedACKHash.data(), md5Hash, 16);
 }
 
 
@@ -112,17 +78,8 @@ void SocketUDP::on_receivedACK(unsigned char* md5Hash)
 bool SocketUDP::SendPackedBytes
                          (QByteArray& bytes,
                           QHostAddress targetAddr,
-                          quint16 targetPort,
-                          bool requireACK,
-                          quint8 retrySeq)
+                          quint16 targetPort)
 {
-    // 重发次数超过MAX
-    if (retrySeq >= this->retryCountMax)
-    {
-        throw QString("网络错误：连接超时。重传次数已达：") + QString(this->retryCountMax);
-        return false;
-    }
-
     // 确认为单包
     if (bytes.size() > this->maxPayloadSize)
     {
@@ -133,33 +90,6 @@ bool SocketUDP::SendPackedBytes
 
     // 发送
     this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
-
-    // 接收回包
-    if (requireACK)
-    {
-        // 发送前MD5Hash
-        QByteArray sentHash = QCryptographicHash::hash(bytes, QCryptographicHash::Md5);
-
-        // 等待回包
-        bool toggleTimeout = false;
-        bool ackValid = false;
-        QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
-        while (!toggleTimeout)
-        {
-            // 校验收到的包
-            if (this->receivedACKHash == sentHash)
-            {
-                ackValid = true;
-                break;
-            }
-        }
-
-        // 判断是否需要重传
-        if (!ackValid)
-        {
-            return this->SendPackedBytes(bytes, targetAddr, targetPort, retrySeq + 1);
-        }
-    }
 
     return true;
 }

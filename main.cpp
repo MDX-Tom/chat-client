@@ -1,12 +1,12 @@
-#include "main_window.h"
+#include "chat_client.h"
 
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    MainWindow winMain;
+    ChatClient MainWindow;
 
-    winMain.show();
+    MainWindow.show();
     return app.exec();
 }

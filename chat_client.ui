@@ -433,11 +433,28 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_btnSendFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>802</x>
+     <y>472</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>896</x>
+     <y>392</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_btnSubmitUser()</slot>
   <slot>on_btnLogout()</slot>
   <slot>on_btnDelCurrentTab()</slot>
   <slot>on_btnSendMsg()</slot>
+  <slot>on_btnSendFile()</slot>
  </slots>
 </ui>

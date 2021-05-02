@@ -12,18 +12,6 @@ SendFileDialog::SendFileDialog(QWidget *parent) :
     this->selectedFile = "";
 }
 
-SendFileDialog::SendFileDialog(ChatClient* chatClient, QString targetUserID, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::SendFileDialog)
-{
-    ui->setupUi(this);
-
-    this->chatClient = chatClient;
-    this->targetUserID = targetUserID;
-
-    this->selectedFile = "";
-}
-
 SendFileDialog::~SendFileDialog()
 {
     delete ui;
@@ -65,6 +53,7 @@ void SendFileDialog::on_btnSend()
         return;
     }
 
-    this->chatClient->SendChatContent(
-                this->targetUserID, ChatPacketUDP::ChatContentType::FILE, this->selectedFile);
+
+    //this->chatClient->SendChatContent(
+    //            this->targetUserID, ChatPacketUDP::ChatContentType::FILE, this->selectedFile);
 }

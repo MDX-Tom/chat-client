@@ -3,28 +3,24 @@
 
 #include <QDialog>
 
-#include "chat_client.h"
-
-namespace Ui {
-class SendFileDialog;
+QT_BEGIN_NAMESPACE
+namespace Ui
+{
+    class SendFileDialog;
 }
+QT_END_NAMESPACE
 
 class SendFileDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    SendFileDialog(ChatClient* chatClient, QString targetUserID, QWidget *parent = nullptr);
-    ~SendFileDialog();
-
-private:
     explicit SendFileDialog(QWidget *parent = nullptr);
-
-    Ui::SendFileDialog *ui;
-    ChatClient* chatClient;
+    ~SendFileDialog();
 
     QString targetUserID;
     QString selectedFile;
+    Ui::SendFileDialog *ui;
 
 private slots:
     void on_btnSelect();
