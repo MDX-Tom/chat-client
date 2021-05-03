@@ -357,22 +357,6 @@
  <resources/>
  <connections>
   <connection>
-   <sender>btnQuit</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>115</x>
-     <y>512</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>400</x>
-     <y>253</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>btnLogout</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
@@ -452,6 +436,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>btnQuit</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_btnExit()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>126</x>
+     <y>523</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>238</x>
+     <y>555</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_btnSubmitUser()</slot>
@@ -459,5 +459,6 @@
   <slot>on_btnDelCurrentTab()</slot>
   <slot>on_btnSendMsg()</slot>
   <slot>on_btnSendFile()</slot>
+  <slot>on_btnExit()</slot>
  </slots>
 </ui>

@@ -10,6 +10,9 @@
 #include <QDateTime>
 #include <QCryptographicHash>
 #include <QMessageBox>
+#include <chrono>
+
+#include <QtConcurrent>
 
 #include <QMainWindow>
 
@@ -54,17 +57,23 @@ ChatClient::ChatClient(QWidget* parent)
     this->chatDialogs = new QMap<quint16, QListWidget*>();
 
     // 定时请求新消息
-    startTimer(this->fetchNewContentIntervalMs); // ms
+    startTimer(this->fetchNewContentIntervalMs, Qt::PreciseTimer); // ms
 }
 
 
 ChatClient::~ChatClient()
 {
-    delete this->ui;
-
     delete this->chatDialogs;
     delete this->user;
     delete this->socketUDP;
+
+    delete this->ui;
+}
+
+
+void ChatClient::on_btnExit()
+{
+    qApp->quit();
 }
 
 
@@ -169,7 +178,46 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
     memcpy(bytesToSend.data() + sizeof(header), bytesText.data(), bytesText.size());
 
     // 通过Socket发送请求Packet
-    return this->socketUDP->SendPackedBytes(bytesToSend);
+
+
+
+    // return this->socketUDP->SendPackedBytes(bytesToSend);
+    quint8 retrySeq = 0;
+    while (++retrySeq)
+    {
+        // 重发次数超过MAX
+        if (retrySeq > this->retryCountMax)
+        {
+            throw QString("\n\n网络错误：连接超时。\n重传次数已达：") + QString::number(this->retryCountMax);
+            return false;
+        }
+
+        this->socketUDP->SendPackedBytes(bytesToSend);
+
+        // 发送前MD5Hash
+        QByteArray sentHash = QCryptographicHash::hash(bytesToSend, QCryptographicHash::Md5);
+
+        // 等待回包
+        QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
+        bool ackValid = false;
+        while (QTime::currentTime() < dieTime)
+        {
+            // 校验收到的包
+            if (this->receivedACKHash == sentHash)
+            {
+                ackValid = true;
+                break;
+            }
+        }
+
+        // 判断是否需要重传
+        if (ackValid)
+        {
+            break;
+        }
+    }
+
+    return true;
 }
 
 
@@ -226,12 +274,12 @@ bool ChatClient::SendFile
         this->RefreshSendFileProgress(progress);
 
         quint8 retrySeq = 0;
-        while (retrySeq++)
+        while (++retrySeq)
         {
             // 重发次数超过MAX
             if (retrySeq > this->retryCountMax)
             {
-                throw QString("网络错误：连接超时。重传次数已达：") + QString(this->retryCountMax);
+                throw QString("\n\n网络错误：连接超时。\n重传次数已达：") + QString::number(this->retryCountMax);
                 return false;
             }
 
@@ -241,10 +289,9 @@ bool ChatClient::SendFile
             QByteArray sentHash = QCryptographicHash::hash(bytesPacket, QCryptographicHash::Md5);
 
             // 等待回包
-            bool toggleTimeout = false;
             bool ackValid = false;
-            QTimer::singleShot(this->waitForReplyMs, [toggleTimeout] () mutable { toggleTimeout = true; });
-            while (!toggleTimeout)
+            QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
+            while (QTime::currentTime() < dieTime)
             {
                 // 校验收到的包
                 if (this->receivedACKHash == sentHash)
@@ -381,6 +428,7 @@ void ChatClient::UDPReceiveHandler()
 
     }
 
+    //
     else if (ChatPacketUDP::isLoginReplyMsg(dataBytes))
     {
         ChatPacketUDP::LoginReplyHeader header = *(ChatPacketUDP::LoginReplyHeader*)dataBytes.data();
@@ -464,7 +512,7 @@ void ChatClient::UDPReceiveHandler()
         {
             ChatPacketUDP::HeaderBase header = *(ChatPacketUDP::HeaderBase*)dataBytes.data();
             qDebug().noquote() << "服务器发来无法解析的信息: " << header.msgType << Qt::endl;
-            QMessageBox::information(nullptr, "出错", "服务器发来无法解析的信息: " + QString::number(header.msgType));
+            // QMessageBox::information(nullptr, "出错", "服务器发来无法解析的信息: " + QString::number(header.msgType));
         }
 
 
@@ -692,7 +740,7 @@ void ChatClient::on_btnSendMsg()
     catch (QString errorString)
     {
         qDebug() << "ERROR: " << errorString << Qt::endl;
-        QMessageBox::critical(this, "发送失败：网络错误",  "发送失败：" + errorString);
+        QMessageBox::critical(this, "发送失败：网络错误",  "发送失败！" + errorString);
         return;
     }
 

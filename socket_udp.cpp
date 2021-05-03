@@ -45,7 +45,6 @@ SocketUDP::SocketUDP()
 SocketUDP::~SocketUDP()
 {
     this->uSocket->close();
-    delete this;
 }
 
 

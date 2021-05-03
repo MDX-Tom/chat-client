@@ -114,6 +114,8 @@ public:
         const quint16 packetSize = sizeof(PacketReplyHeader);
         const quint8 msgType = ServerMsgType::MSG_SERVER_ACK;
 
+        const quint8 placeHolder = 0; // 字节对齐
+
         unsigned char md5Hash[16];
     };
 

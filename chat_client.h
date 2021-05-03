@@ -24,7 +24,7 @@ class ChatClient : public QMainWindow
 
 private:
     // 超时重传等待时间
-    quint16 waitForReplyMs = 100; // 可以添加自适应算法
+    const int waitForReplyMs = 1000; // 可以添加自适应算法
     // 超时重传次数
     const quint8 retryCountMax = 3;
     // 收到的ACK哈希值
@@ -47,6 +47,8 @@ private slots:
     void on_btnSendMsg();
     void on_btnSendFile();
     void on_btnDelCurrentTab();
+
+    void on_btnExit();
 
 public:
     ChatClient(QWidget *parent = nullptr);
