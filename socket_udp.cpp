@@ -38,7 +38,7 @@ SocketUDP::SocketUDP()
 
     // 处理接收信号槽
     QObject::connect(this->uSocket, SIGNAL(readyRead()),
-                     this, SLOT(on_ReceiveData()));
+                     this, SLOT(on_receiveData()));
 }
 
 
@@ -90,6 +90,9 @@ bool SocketUDP::SendPackedBytes
 
     // 发送
     this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
+
+    qDebug().noquote() << "Sent to: " << targetAddr.toString() << ":"
+                       << QString::number(targetPort) << " : " << QString(bytes) << Qt::endl;
 
     return true;
 }

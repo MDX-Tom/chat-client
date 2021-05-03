@@ -59,7 +59,7 @@ public:
         const quint8 msgType = ClientMsgType::LOGIN_REQUEST;
 
         quint16 thisUserID;
-        quint8 password[25];
+        quint8 password[28];
     };
 
     struct LogoutRequestHeader

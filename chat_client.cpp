@@ -49,7 +49,7 @@ ChatClient::ChatClient(QWidget* parent)
     // 初始化
     this->socketUDP = new SocketUDP(); 
     QObject::connect(this->socketUDP, SIGNAL(on_receivedData()),
-                     this, SLOT(UDPReceiveHandler));
+                     this, SLOT(UDPReceiveHandler()));
     this->user = new ChatUser(00000, "pswd_00000", "name_00000", new QVector<quint16>());
     this->chatDialogs = new QMap<quint16, QListWidget*>();
 
@@ -98,8 +98,10 @@ bool ChatClient::Login(quint16 id, QString password)
     ChatPacketUDP::LoginRequestHeader header;
     header.thisUserID = id;
     QByteArray passwordBytes = password.toLatin1();
+    quint16 sizeBefore = passwordBytes.size();
     passwordBytes.resize(sizeof(header.password));
     memcpy(header.password, passwordBytes.data(), sizeof(header.password));
+    memset(header.password + sizeBefore, 0, sizeof(header.password) - sizeBefore);
 
     // 打包Header
     QByteArray bytesPacket;

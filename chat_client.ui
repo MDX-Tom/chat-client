@@ -312,17 +312,20 @@
      <string>关闭当前聊天</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="btnSendFile">
     <property name="geometry">
      <rect>
       <x>760</x>
-      <y>440</y>
+      <y>433</y>
       <width>101</width>
-      <height>24</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
      <string>发送文件</string>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
     </property>
    </widget>
   </widget>
@@ -434,7 +437,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton</sender>
+   <sender>btnSendFile</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>on_btnSendFile()</slot>
