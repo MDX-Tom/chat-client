@@ -264,7 +264,7 @@ bool ChatClient::SendFile
         header.fromUserID = this->user->getID();
         header.targetUserID = targetUserID;
         header.packetCountTotal = packetCountTotal;
-        header.packetCountCurrent = i + 1;
+        header.packetCountCurrent = i;
 
         // 写入Header和Payload到QByteArray
         QByteArray bytesPacket;

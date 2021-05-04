@@ -92,9 +92,15 @@ public:
         quint16 targetUserID;
         const quint8 contentType = ChatContentType::FILE;
 
+        quint8 fileNameLength;
+
         // 分包信息
         quint32 packetCountTotal;
         quint32 packetCountCurrent;
+
+        // 包后紧跟fineName
+        // 然后才是payload
+        // ? 需要文件名防冲突
     };
 
     struct ChatRequestHeader
