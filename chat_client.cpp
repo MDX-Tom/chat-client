@@ -23,6 +23,9 @@ ChatClient::ChatClient(QWidget* parent)
 {
     this->ui->setupUi(this);
 
+    QObject::connect(this->sendFileDialog, SIGNAL(sendFile()), this, SLOT(sendFile()));
+    QObject::connect(this, SIGNAL(sendFileProgress(int)), this->sendFileDialog, SLOT(SetProgress(int)));
+
     // 设定Login状态指示文字的状态
     QPalette pe;
     pe.setColor(QPalette::WindowText, Qt::red);
@@ -247,8 +250,10 @@ bool ChatClient::SendFile
         file.close();
         return false;
     }
-    qint16 bytesCountPerPacket = this->socketUDP->MaxPacketSize() - sizeof(ChatPacketUDP::FileMsgHeader); // 单包包含的文件字节数
-    qint16 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
+
+    quint16 maxPacketSize = this->socketUDP->MaxPacketSize();
+    qint32 bytesCountPerPacket = maxPacketSize - sizeof(ChatPacketUDP::FileMsgHeader); // 单包包含的文件字节数
+    qint32 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
 
     // 分包发送
     for (int i = 0; i < packetCountTotal; i++)
@@ -267,11 +272,11 @@ bool ChatClient::SendFile
         header.packetSize = sizeof(header) + bytesFile.size();
         bytesPacket.resize(header.packetSize);
         memcpy(bytesPacket.data(), &header, sizeof(header)); // sizeof(header) == header.headerSize
-        memcpy(bytesFile.data() + sizeof(header), &header, bytesFile.size()); // bytesFile.size() == bytesCountPerPacket
+        memcpy(bytesPacket.data() + sizeof(header), bytesFile.data(), bytesFile.size()); // bytesFile.size() == bytesCountPerPacket
 
         // 更新进度指示信号
-        float progress = 1.0 * i / packetCountTotal;
-        this->RefreshSendFileProgress(progress);
+        int progress = 100 * (i + 1) / packetCountTotal;
+        emit this->sendFileProgress(progress);
 
         quint8 retrySeq = 0;
         while (++retrySeq)
@@ -290,6 +295,7 @@ bool ChatClient::SendFile
 
             // 等待回包
             bool ackValid = false;
+            QTime time = QTime::currentTime();
             QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
             while (QTime::currentTime() < dieTime)
             {
@@ -304,8 +310,11 @@ bool ChatClient::SendFile
             // 判断是否需要重传
             if (ackValid)
             {
+                qDebug().noquote().nospace() << "Used Time: " << time.msecsTo(QTime::currentTime()) << "ms." << Qt::endl;
                 break;
             }
+
+            qDebug().noquote().nospace() << "RETRY SEQ: " << retrySeq << Qt::endl;
         }
 
     }
@@ -522,12 +531,6 @@ void ChatClient::UDPReceiveHandler()
 
 //-----------------------------------UI函数----------------------------------
 
-/// 刷新文件发送进度条
-void ChatClient::RefreshSendFileProgress(float progress)
-{
-
-}
-
 
 /// 刷新“好友”列表显示
 void ChatClient::RefreshBtnFriendsView()
@@ -728,6 +731,10 @@ void ChatClient::on_btnLogout()
 /// "发送消息"按钮信号槽函数
 void ChatClient::on_btnSendMsg()
 {
+    QtConcurrent::run(this, &ChatClient::btnSendMsg);
+}
+void ChatClient::btnSendMsg()
+{
     QTextDocument* docTextMsg = this->ui->inputTextMsg->document();
     QString inputTextMsg = docTextMsg->toPlainText();
 
@@ -760,6 +767,27 @@ void ChatClient::on_btnSendMsg()
 ///
 void ChatClient::on_btnSendFile()
 {
+    this->sendFileDialog->show();
+}
 
+
+/// FileDialog窗口点击“发送”后，调用此槽函数
+void ChatClient::sendFile()
+{
+    // QtConcurrent::run(this, &ChatClient::SendFile, this->sendFileDialog->selectedFile, 0);
+
+    QtConcurrent::run([this]
+    {
+        try
+        {
+            this->SendFile(this->sendFileDialog->selectedFile, 0);
+        }
+        catch (QString errorString)
+        {
+            qDebug() << "ERROR: " << errorString << Qt::endl;
+            QMessageBox::critical(nullptr, "发送失败：网络错误",  "发送失败！\n" + errorString);
+            return;
+        }
+    });
 }
 

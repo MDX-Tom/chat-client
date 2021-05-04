@@ -2,6 +2,7 @@
 #define SEND_FILE_DIALOG_H
 
 #include <QDialog>
+#include <QFileInfo>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -18,13 +19,21 @@ public:
     explicit SendFileDialog(QWidget *parent = nullptr);
     ~SendFileDialog();
 
-    QString targetUserID;
     QString selectedFile;
+
+public slots:
+    void SetProgress(int progress);
+
+private:
     Ui::SendFileDialog *ui;
+    QFileInfo file;
 
 private slots:
     void on_btnSelect();
     void on_btnSend();
+
+signals:
+    void sendFile();
 };
 
 #endif // SEND_FILE_DIALOG_H

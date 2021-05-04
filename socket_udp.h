@@ -25,7 +25,8 @@ private:
     // 最大单包内容大小
     // UDP max payloadSize is 65507 Bytes (packetSize <= 65535)
     // but payloadSize <= 548 (packetSize <= 576) will not cause fragmentation
-    const quint16 maxPayloadSize = 548;
+    // For macOS, 8192 bytes is at most.
+    const quint16 maxPayloadSize = 8192;
 
     // 本机信息
     QHostAddress thisAddr;

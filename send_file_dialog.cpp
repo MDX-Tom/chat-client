@@ -10,11 +10,24 @@ SendFileDialog::SendFileDialog(QWidget *parent) :
     ui->setupUi(this);
 
     this->selectedFile = "";
+
+    this->ui->label->setText("");
+
+    this->ui->progressBar->setRange(0, 100);
+    this->ui->progressBar->reset();
+
+    this->file = QFileInfo();
 }
 
 SendFileDialog::~SendFileDialog()
 {
     delete ui;
+}
+
+void SendFileDialog::SetProgress(int progress)
+{
+    this->ui->progressBar->setValue(progress);
+    qApp->processEvents();
 }
 
 void SendFileDialog::on_btnSelect()
@@ -39,11 +52,23 @@ void SendFileDialog::on_btnSelect()
 
     //所有选择的文件的路径
     QStringList fileNames;
-    if (fileDialog->exec()) {
+    if (fileDialog->exec())
+    {
         fileNames = fileDialog->selectedFiles();
     }
 
+    if (fileNames.length() == 0)
+    {
+        return;
+    }
+
     this->selectedFile = fileNames.at(0);
+    this->file.setFile(selectedFile);
+
+    double megaBytes = this->file.size() / 1e6;
+    this->ui->label->setText(this->file.fileName() + " " + QString::number(megaBytes, 'g', 2) + "MB");
+
+    this->ui->progressBar->reset();
 }
 
 void SendFileDialog::on_btnSend()
@@ -53,7 +78,5 @@ void SendFileDialog::on_btnSend()
         return;
     }
 
-
-    //this->chatClient->SendChatContent(
-    //            this->targetUserID, ChatPacketUDP::ChatContentType::FILE, this->selectedFile);
+    emit this->sendFile();
 }

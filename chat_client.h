@@ -37,6 +37,9 @@ private:
     void AddTabChatView(QString& tabTitle, quint16 friendUserID);
     void DelCurrentTabChatView();
 
+signals:
+    void sendFileProgress(int);
+
 public slots:
     void UDPReceiveHandler();
 
@@ -44,8 +47,13 @@ private slots:
     void on_btnSubmitUser();
     void on_btnLogout();
     void on_btnFriends();
+
     void on_btnSendMsg();
+    void btnSendMsg(); // 新线程发送
+
     void on_btnSendFile();
+    void sendFile(); // 经FileDialog激活后，开新线程发送
+
     void on_btnDelCurrentTab();
 
     void on_btnExit();
@@ -79,8 +87,6 @@ public:
     bool SendChatRequest();
 
     //-------------------------UI 操作-----------------------------
-
-    void RefreshSendFileProgress(float); // 指示文件发送进度
 };
 
 #endif // CHAT_CLIENT_H

@@ -6,6 +6,7 @@
 #include <QHostInfo>
 #include <QHostAddress>
 #include <QNetworkDatagram>
+#include <QAbstractSocket>
 #include <QTimer>
 #include <QDebug>
 
@@ -88,10 +89,16 @@ bool SocketUDP::SendPackedBytes
     }
 
     // 发送
-    this->uSocket->writeDatagram(bytes, targetAddr, targetPort);
+    if (this->uSocket->writeDatagram(bytes, bytes.size(), targetAddr, targetPort) == -1)
+    {
+        throw QString("Datagram TOO LARGE!");
+        return false;
+    }
 
-    qDebug().noquote() << "Sent to: " << targetAddr.toString() << ":"
-                       << QString::number(targetPort) << " : " << QString(bytes) << Qt::endl;
+    ChatPacketUDP::HeaderBase* header = (ChatPacketUDP::HeaderBase*)bytes.data();
+
+    qDebug().noquote().nospace() << "Outgoing Datagram -> " << targetAddr.toString() << ":"
+                                 << QString::number(targetPort) << " with msgType = " << header->msgType << Qt::endl;
 
     return true;
 }
