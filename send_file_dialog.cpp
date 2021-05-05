@@ -10,6 +10,7 @@ SendFileDialog::SendFileDialog(QWidget *parent) :
     ui->setupUi(this);
 
     this->selectedFile = "";
+    this->selectedFileNameOnly = "";
 
     this->ui->label->setText("");
 
@@ -64,11 +65,12 @@ void SendFileDialog::on_btnSelect()
 
     this->selectedFile = fileNames.at(0);
     this->file.setFile(selectedFile);
-
+    this->selectedFileNameOnly = this->file.fileName();
     double megaBytes = this->file.size() / 1e6;
-    this->ui->label->setText(this->file.fileName() + " " + QString::number(megaBytes, 'g', 2) + "MB");
+    this->ui->label->setText(this->selectedFileNameOnly + " " + QString::number(megaBytes, 'g', 2) + "MB");
 
     this->ui->progressBar->reset();
+    // this->file = QFileInfo();
 }
 
 void SendFileDialog::on_btnSend()

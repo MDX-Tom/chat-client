@@ -6,6 +6,7 @@
 #include "chat_packet_udp.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QTimer>
 #include <QDateTime>
 #include <QCryptographicHash>
@@ -231,14 +232,23 @@ bool ChatClient::SendFile
                          quint16 targetPort,
                          quint16 targetUserID = 0)
 {
-    qDebug().noquote() << "Selected file: " << fileNameWithPath << Qt::endl;
-
     // 打开文件
     QFile file(fileNameWithPath);
     if (!file.open(QIODevice::ReadOnly))
     {
         throw "打开文件失败...";
         file.close();
+        return false;
+    }
+
+    // 转化文件名
+    QFileInfo fileInfo;
+    fileInfo.setFile(fileNameWithPath);
+    QByteArray fileNameBytes = fileInfo.fileName().toLocal8Bit();
+    qDebug().noquote() << "Selected file: " << fileNameBytes << Qt::endl;
+    if (fileNameBytes.size() >= __UINT8_MAX__)
+    {
+        throw "文件名太长！";
         return false;
     }
 
@@ -252,7 +262,7 @@ bool ChatClient::SendFile
     }
 
     quint16 maxPacketSize = this->socketUDP->MaxPacketSize();
-    qint32 bytesCountPerPacket = maxPacketSize - sizeof(ChatPacketUDP::FileMsgHeader); // 单包包含的文件字节数
+    qint32 bytesCountPerPacket = maxPacketSize - sizeof(ChatPacketUDP::FileMsgHeader) - fileNameBytes.size(); // 单包包含的文件字节数
     qint32 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
 
     // 分包发送
@@ -260,19 +270,21 @@ bool ChatClient::SendFile
     {
         // 处理包头
         ChatPacketUDP::FileMsgHeader header;
-        header.packetSize = sizeof(header) + bytesCountPerPacket; // == this->maxPayloadSize
+        header.packetSize = sizeof(header) + fileNameBytes.size() + bytesCountPerPacket; // == this->maxPayloadSize
         header.fromUserID = this->user->getID();
         header.targetUserID = targetUserID;
+        header.fileNameLength = fileNameBytes.size();
         header.packetCountTotal = packetCountTotal;
-        header.packetCountCurrent = i;
+        header.packetCountCurrent = i; // 从0开始
 
-        // 写入Header和Payload到QByteArray
+        // 写入Header、FileName、Payload到QByteArray
         QByteArray bytesPacket;
         QByteArray bytesFile = file.read(bytesCountPerPacket);
-        header.packetSize = sizeof(header) + bytesFile.size();
+        header.packetSize = sizeof(header) + header.fileNameLength + bytesFile.size(); // 实际读取的字节数更新包长度
         bytesPacket.resize(header.packetSize);
-        memcpy(bytesPacket.data(), &header, sizeof(header)); // sizeof(header) == header.headerSize
-        memcpy(bytesPacket.data() + sizeof(header), bytesFile.data(), bytesFile.size()); // bytesFile.size() == bytesCountPerPacket
+        memcpy(bytesPacket.data(), &header, sizeof(header));
+        memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
+        memcpy(bytesPacket.data() + sizeof(header) + header.fileNameLength, bytesFile.data(), bytesFile.size());
 
         // 更新进度指示信号
         int progress = 100 * (i + 1) / packetCountTotal;

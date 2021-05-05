@@ -20,6 +20,7 @@ public:
     ~SendFileDialog();
 
     QString selectedFile;
+    QString selectedFileNameOnly;
 
 public slots:
     void SetProgress(int progress);
