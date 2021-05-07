@@ -9,7 +9,7 @@
 #include <QFileInfo>
 #include <QTimer>
 #include <QDateTime>
-#include <QCryptographicHash>
+// #include <QCryptographicHash>
 #include <QMessageBox>
 #include <chrono>
 
@@ -175,6 +175,8 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
     header.fromUserID = this->user->getID();
     header.targetUserID = targetUserID;
 
+    header.packetSeq = this->sendPacketSeq++;
+
     // 打包Header
     QByteArray bytesToSend;
     bytesToSend.resize(header.packetSize);
@@ -182,8 +184,6 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
     memcpy(bytesToSend.data() + sizeof(header), bytesText.data(), bytesText.size());
 
     // 通过Socket发送请求Packet
-
-
 
     // return this->socketUDP->SendPackedBytes(bytesToSend);
     quint8 retrySeq = 0;
@@ -199,7 +199,7 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
         this->socketUDP->SendPackedBytes(bytesToSend);
 
         // 发送前MD5Hash
-        QByteArray sentHash = QCryptographicHash::hash(bytesToSend, QCryptographicHash::Md5);
+        // QByteArray sentHash = QCryptographicHash::hash(bytesToSend, QCryptographicHash::Md5);
 
         // 等待回包
         QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
@@ -207,7 +207,7 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
         while (QTime::currentTime() < dieTime)
         {
             // 校验收到的包
-            if (this->receivedACKHash == sentHash)
+            if (this->ackPacketSeq == header.packetSeq)
             {
                 ackValid = true;
                 break;
@@ -277,6 +277,8 @@ bool ChatClient::SendFile
         header.packetCountTotal = packetCountTotal;
         header.packetCountCurrent = i; // 从0开始
 
+        header.packetSeq = this->sendPacketSeq++;
+
         // 写入Header、FileName、Payload到QByteArray
         QByteArray bytesPacket;
         QByteArray bytesFile = file.read(bytesCountPerPacket);
@@ -302,8 +304,8 @@ bool ChatClient::SendFile
 
             this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
 
-            // 发送前MD5Hash
-            QByteArray sentHash = QCryptographicHash::hash(bytesPacket, QCryptographicHash::Md5);
+            // 发送前MD5Hash (性能原因，不采用)
+            // QByteArray sentHash = QCryptographicHash::hash(bytesPacket, QCryptographicHash::Md5);
 
             // 等待回包
             bool ackValid = false;
@@ -312,7 +314,7 @@ bool ChatClient::SendFile
             while (QTime::currentTime() < dieTime)
             {
                 // 校验收到的包
-                if (this->receivedACKHash == sentHash)
+                if (this->ackPacketSeq == header.packetSeq)
                 {
                     ackValid = true;
                     break;
@@ -384,8 +386,10 @@ void ChatClient::UDPReceiveHandler()
     {
         ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)dataBytes.data();
 
-        this->receivedACKHash.resize(16);
-        memcpy(this->receivedACKHash.data(), ackHeader.md5Hash, 16);
+        this->ackPacketSeq = ackHeader.packetSeq;
+
+        // this.receivedACKHash.resize(16)
+        // memcpy(this->receivedACKHash.data(), ackHeader.md5Hash, 16);
     }
 
     //

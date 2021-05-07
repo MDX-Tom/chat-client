@@ -24,11 +24,19 @@ class ChatClient : public QMainWindow
 
 private:
     // 超时重传等待时间
-    const int waitForReplyMs = 1000; // 可以添加自适应算法
+    const int waitForReplyMs = 80; // 可以添加自适应算法
     // 超时重传次数
-    const quint8 retryCountMax = 5;
+    const quint8 retryCountMax = 10;
+    // 发多少个包等待ACK
+    const quint16 waitForReplyCount = 100;
+    // 发包间隔时间
+    const quint8 waitForSendMs = 4;
+
     // 收到的ACK哈希值
-    QByteArray receivedACKHash;
+    // QByteArray receivedACKHash;
+
+    quint16 sendPacketSeq = 0;
+    quint16 ackPacketSeq = 65535;
 
     Ui::MainWindow *ui;
     SendFileDialog* sendFileDialog;

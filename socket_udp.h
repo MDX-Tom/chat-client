@@ -20,7 +20,7 @@ private:
     // 预置信息
     const QHostAddress serverAddr = QHostAddress("10.128.206.236");
     const quint16 serverPort = 8002;
-    const quint16 clientPort = 8002;
+    const quint16 clientPort = 8003;
 
     // 最大单包内容大小
     // UDP max payloadSize is 65507 Bytes (packetSize <= 65535)

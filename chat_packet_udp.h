@@ -76,10 +76,14 @@ public:
         const quint16 headerSize = sizeof(TextMsgHeader); // in bytes
         quint16 packetSize; // in bytes (= headerSize + payloadSize)
         const quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
+        // BLANK BYTE
 
         quint16 fromUserID;
         quint16 targetUserID;
         const quint8 contentType = ChatContentType::TEXT;
+        // BLANK BYTE
+
+        quint16 packetSeq;
     };
 
     struct FileMsgHeader
@@ -87,12 +91,16 @@ public:
         const quint16 headerSize = sizeof(FileMsgHeader); // in bytes
         quint16 packetSize; // in bytes (= headerSize + payloadSize)
         const quint8 msgType = ClientMsgType::CHAT_CONTENT_CLIENT;
+        // BLANK BYTE
 
         quint16 fromUserID;
         quint16 targetUserID;
         const quint8 contentType = ChatContentType::FILE;
+        // BLACK BYTE
 
+        quint16 packetSeq;
         quint8 fileNameLength;
+        // BLANK BYTE
 
         // 分包信息
         quint32 packetCountTotal;
@@ -100,7 +108,6 @@ public:
 
         // 包后紧跟fineName
         // 然后才是payload
-        // ? 需要文件名防冲突
     };
 
     struct ChatRequestHeader
@@ -120,9 +127,10 @@ public:
         const quint16 packetSize = sizeof(PacketReplyHeader);
         const quint8 msgType = ServerMsgType::MSG_SERVER_ACK;
 
-        const quint8 placeHolder = 0; // 字节对齐
+        // const quint8 placeHolder = 0; // 字节对齐
+        // unsigned char md5Hash[16];
 
-        unsigned char md5Hash[16];
+        quint16 packetSeq = 0;
     };
 
     struct LoginReplyHeader
