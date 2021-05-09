@@ -88,12 +88,20 @@ bool SocketUDP::SendPackedBytes
         return false;
     }
 
+    // 延时
+    while (QTime::currentTime() <= this->timeToNextSend())
+    {
+        // do nothing but wait
+    }
+
     // 发送
     if (this->uSocket->writeDatagram(bytes, bytes.size(), targetAddr, targetPort) == -1)
     {
         throw QString("Datagram TOO LARGE!");
         return false;
     }
+
+    this->timeLastSent = QTime::currentTime();
 
     ChatPacketUDP::HeaderBase* header = (ChatPacketUDP::HeaderBase*)bytes.data();
 

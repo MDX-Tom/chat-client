@@ -24,19 +24,28 @@ class ChatClient : public QMainWindow
 
 private:
     // 超时重传等待时间
-    const int waitForReplyMs = 80; // 可以添加自适应算法
+    int waitForReplyMs = 80; // 可以添加自适应算法
     // 超时重传次数
     const quint8 retryCountMax = 10;
     // 发多少个包等待ACK
-    const quint16 waitForReplyCount = 100;
-    // 发包间隔时间
-    const quint8 waitForSendMs = 4;
+    quint16 waitForReplyCount = 100; // 可以添加自适应算法，< 65535
 
     // 收到的ACK哈希值
     // QByteArray receivedACKHash;
 
+    // 发包Seqence
     quint16 sendPacketSeq = 0;
+    // 收到包的Sequence
     quint16 ackPacketSeq = 65535;
+
+    bool isSendingFile = false;
+
+    // 对文件分片和packetSeq建立映射
+    QMap<quint16, quint32> packetSeq2i;
+    // 存储的文件Packet,以文件分片号[i]为索引
+    QMap<quint32, QByteArray> filePacketBytes;
+    // 滑动窗口内是否收到了ack包,以文件分片号[i]为索引
+    QMap<quint32, bool> ackValid;
 
     Ui::MainWindow *ui;
     SendFileDialog* sendFileDialog;

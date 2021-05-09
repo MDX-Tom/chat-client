@@ -262,24 +262,39 @@ bool ChatClient::SendFile
     }
 
     quint16 maxPacketSize = this->socketUDP->MaxPacketSize();
-    qint32 bytesCountPerPacket = maxPacketSize - sizeof(ChatPacketUDP::FileMsgHeader) - fileNameBytes.size(); // 单包包含的文件字节数
-    qint32 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
+    quint32 bytesCountPerPacket = maxPacketSize - sizeof(ChatPacketUDP::FileMsgHeader) - fileNameBytes.size(); // 单包包含的文件字节数
+    quint32 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
+
+    //-----------------------------------------开始发送-------------------------------------------
+    this->isSendingFile = true;
+
+    // 处理包头
+    ChatPacketUDP::FileMsgHeader header;
+    header.packetSize = sizeof(header) + fileNameBytes.size() + bytesCountPerPacket; // == this->maxPayloadSize
+    header.fromUserID = this->user->getID();
+    header.targetUserID = targetUserID;
+    header.fileNameLength = fileNameBytes.size();
+    header.packetCountTotal = packetCountTotal;
 
     // 分包发送
-    for (int i = 0; i < packetCountTotal; i++)
+    for (quint32 i = 1; i <= packetCountTotal; i++)
     {
-        // 处理包头
-        ChatPacketUDP::FileMsgHeader header;
-        header.packetSize = sizeof(header) + fileNameBytes.size() + bytesCountPerPacket; // == this->maxPayloadSize
-        header.fromUserID = this->user->getID();
-        header.targetUserID = targetUserID;
-        header.fileNameLength = fileNameBytes.size();
-        header.packetCountTotal = packetCountTotal;
-        header.packetCountCurrent = i; // 从0开始
+        quint16 waitForReplyCount = i == packetCountTotal ?
+                    packetCountTotal % this->waitForReplyCount :
+                    this->waitForReplyCount;
 
+        if (i % waitForReplyCount == 0 || i == packetCountTotal)
+        {
+            this->packetSeq2i.clear();
+            this->filePacketBytes.clear();
+            this->ackValid.clear();
+        }
+
+        header.packetCountCurrent = i;
         header.packetSeq = this->sendPacketSeq++;
+        this->packetSeq2i[header.packetSeq] = i;
 
-        // 写入Header、FileName、Payload到QByteArray
+        // 打包Header、FileName、Payload
         QByteArray bytesPacket;
         QByteArray bytesFile = file.read(bytesCountPerPacket);
         header.packetSize = sizeof(header) + header.fileNameLength + bytesFile.size(); // 实际读取的字节数更新包长度
@@ -288,51 +303,103 @@ bool ChatClient::SendFile
         memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
         memcpy(bytesPacket.data() + sizeof(header) + header.fileNameLength, bytesFile.data(), bytesFile.size());
 
-        // 更新进度指示信号
-        int progress = 100 * (i + 1) / packetCountTotal;
-        emit this->sendFileProgress(progress);
+        // 发送当前包
+        this->filePacketBytes[i] = bytesPacket;
+        this->ackValid[i] = false;
+        this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
 
-        quint8 retrySeq = 0;
-        while (++retrySeq)
+        // 发送后的判断
+        if (i % this->waitForReplyCount == 0 || i == packetCountTotal)
         {
-            // 重发次数超过MAX
-            if (retrySeq > this->retryCountMax)
+            // 需要等待ack然后选择重传
+
+            quint16 packetLost = 0;
+            quint8 retrySeq = 0; // 重传轮数
+
+            while (++retrySeq <= this->retryCountMax)
+            {
+                // 首先等待当前包ack收到或超时
+                QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
+                while (QTime::currentTime() <= dieTime)
+                {
+                    if (this->ackValid[i])
+                    {
+                        break;
+                    }
+                }
+
+                // 然后对所有包进行选择重传
+                for (quint32 j = 0; j < waitForReplyCount; j++) // offset
+                {
+                    if (this->ackValid[i + j])
+                    {
+                        continue;
+                    }
+
+                    // 对没有收到ack的包再发一次，并等待下一轮进行判断
+                    packetLost++;
+                    this->socketUDP->SendPackedBytes(this->filePacketBytes[i + j], targetAddr, targetPort);
+                }
+
+                // 本轮全部ack，退出重传循环
+                if (!packetLost)
+                {
+                    qDebug().noquote().nospace() << "文件分片: " << i << " 本轮丢包: 0" << Qt::endl;
+                    break;
+                }
+
+                qDebug().noquote().nospace() << "RETRY SEQ: " << retrySeq << "本轮丢包: " << packetLost << Qt::endl;
+                packetLost = 0;
+            }
+
+            // 重传超过最大轮数
+            if (packetLost)
             {
                 throw QString("\n\n网络错误：连接超时。\n重传次数已达：") + QString::number(this->retryCountMax);
                 return false;
             }
-
-            this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
-
-            // 发送前MD5Hash (性能原因，不采用)
-            // QByteArray sentHash = QCryptographicHash::hash(bytesPacket, QCryptographicHash::Md5);
-
-            // 等待回包
-            bool ackValid = false;
-            QTime time = QTime::currentTime();
-            QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
-            while (QTime::currentTime() < dieTime)
-            {
-                // 校验收到的包
-                if (this->ackPacketSeq == header.packetSeq)
-                {
-                    ackValid = true;
-                    break;
-                }
-            }
-
-            // 判断是否需要重传
-            if (ackValid)
-            {
-                qDebug().noquote().nospace() << "Used Time: " << time.msecsTo(QTime::currentTime()) << "ms." << Qt::endl;
-                break;
-            }
-
-            qDebug().noquote().nospace() << "RETRY SEQ: " << retrySeq << Qt::endl;
         }
 
+        // 更新进度指示信号
+        if (i % this->waitForReplyCount == 0 || i == packetCountTotal)
+        {
+            int progress = 100 * i / packetCountTotal;
+            emit this->sendFileProgress(progress);
+        }
     }
 
+    // 发送文件结束包
+    QByteArray bytesPacket;
+    header.packetCountCurrent = header.packetCountTotal + 1;
+    header.packetSeq = this->sendPacketSeq++;
+    header.packetSize = sizeof(header) + header.fileNameLength;
+    bytesPacket.resize(header.packetSize);
+    memcpy(bytesPacket.data(), &header, sizeof(header));
+    memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
+
+    this->ackValid[header.packetCountCurrent] = false;
+
+    quint8 retrySeq = 0;
+    while (++retrySeq <= this->retryCountMax)
+    {
+        this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
+
+        QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
+        while (QTime::currentTime() <= dieTime)
+        {
+            if (this->ackValid[header.packetCountCurrent])
+            {
+                break;
+            }
+        }
+
+        if (this->ackValid[header.packetCountCurrent])
+        {
+            break;
+        }
+    }
+
+    this->isSendingFile = false;
     file.close();
 
     return true;
@@ -388,6 +455,12 @@ void ChatClient::UDPReceiveHandler()
 
         this->ackPacketSeq = ackHeader.packetSeq;
 
+        if (this->isSendingFile)
+        {
+            this->ackValid[this->packetSeq2i[ackHeader.packetSeq]] = true;
+        }
+
+        // Obsolete: Check MD5 Hash
         // this.receivedACKHash.resize(16)
         // memcpy(this->receivedACKHash.data(), ackHeader.md5Hash, 16);
     }

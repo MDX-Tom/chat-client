@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QQueue>
 #include <QThread>
+#include <QTime>
 #include <QUdpSocket>
 #include <QHostAddress>
 
@@ -27,6 +28,10 @@ private:
     // but payloadSize <= 548 (packetSize <= 576) will not cause fragmentation
     // For macOS, 8192 bytes is at most.
     const quint16 maxPayloadSize = 8192;
+
+    QTime timeLastSent = QTime::currentTime();
+    quint16 waitToSendMs = 4;
+    QTime timeToNextSend() { return this->timeLastSent.addMSecs(this->waitToSendMs); }
 
     // 本机信息
     QHostAddress thisAddr;
@@ -57,6 +62,9 @@ public:
 
     bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort);
     bool SendPackedBytes(QByteArray& bytesPacked);
+
+    quint16 WaitToSendMs() { return this->waitToSendMs; }
+    void SetWaitToSendMs(quint16 ms) { this->waitToSendMs = ms; }
 };
 
 
