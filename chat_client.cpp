@@ -279,16 +279,9 @@ bool ChatClient::SendFile
     // 分包发送
     for (quint32 i = 1; i <= packetCountTotal; i++)
     {
-        quint16 waitForReplyCount = i == packetCountTotal ?
+        quint16 waitForReplyCount = ((i == packetCountTotal) && (i % this->waitForReplyCount != 0)) ?
                     packetCountTotal % this->waitForReplyCount :
                     this->waitForReplyCount;
-
-        if (i % waitForReplyCount == 0 || i == packetCountTotal)
-        {
-            this->packetSeq2i.clear();
-            this->filePacketBytes.clear();
-            this->ackValid.clear();
-        }
 
         header.packetCountCurrent = i;
         header.packetSeq = this->sendPacketSeq++;
@@ -309,7 +302,7 @@ bool ChatClient::SendFile
         this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
 
         // 发送后的判断
-        if (i % this->waitForReplyCount == 0 || i == packetCountTotal)
+        if (i % waitForReplyCount == 0 || i == packetCountTotal)
         {
             // 需要等待ack然后选择重传
 
@@ -329,26 +322,26 @@ bool ChatClient::SendFile
                 }
 
                 // 然后对所有包进行选择重传
-                for (quint32 j = 0; j < waitForReplyCount; j++) // offset
+                for (quint32 j = i - waitForReplyCount + 1; j <= i; j++)
                 {
-                    if (this->ackValid[i + j])
+                    if (this->ackValid[j])
                     {
                         continue;
                     }
 
                     // 对没有收到ack的包再发一次，并等待下一轮进行判断
                     packetLost++;
-                    this->socketUDP->SendPackedBytes(this->filePacketBytes[i + j], targetAddr, targetPort);
+                    this->socketUDP->SendPackedBytes(this->filePacketBytes[j], targetAddr, targetPort);
                 }
 
                 // 本轮全部ack，退出重传循环
                 if (!packetLost)
                 {
-                    qDebug().noquote().nospace() << "文件分片: " << i << " 本轮丢包: 0" << Qt::endl;
+                    qDebug().noquote().nospace() << "文件分片: " << i << ", 传输完成..." << Qt::endl;
                     break;
                 }
 
-                qDebug().noquote().nospace() << "RETRY SEQ: " << retrySeq << "本轮丢包: " << packetLost << Qt::endl;
+                qDebug().noquote().nospace() << "文件分片: " << i << ", 第" << retrySeq << "轮重传: " << packetLost << "包" << Qt::endl;
                 packetLost = 0;
             }
 
@@ -360,11 +353,15 @@ bool ChatClient::SendFile
             }
         }
 
-        // 更新进度指示信号
-        if (i % this->waitForReplyCount == 0 || i == packetCountTotal)
+        if (i % waitForReplyCount == 0 || i == packetCountTotal)
         {
+            // 更新进度指示信号
             int progress = 100 * i / packetCountTotal;
             emit this->sendFileProgress(progress);
+
+            this->packetSeq2i.clear();
+            this->filePacketBytes.clear();
+            this->ackValid.clear();
         }
     }
 
@@ -401,6 +398,10 @@ bool ChatClient::SendFile
 
     this->isSendingFile = false;
     file.close();
+
+    this->packetSeq2i.clear();
+    this->filePacketBytes.clear();
+    this->ackValid.clear();
 
     return true;
 }

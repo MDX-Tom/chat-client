@@ -30,7 +30,7 @@ private:
     const quint16 maxPayloadSize = 8192;
 
     QTime timeLastSent = QTime::currentTime();
-    quint16 waitToSendMs = 4;
+    quint16 waitToSendMs = 1;
     QTime timeToNextSend() { return this->timeLastSent.addMSecs(this->waitToSendMs); }
 
     // 本机信息

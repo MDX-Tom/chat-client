@@ -105,8 +105,10 @@ bool SocketUDP::SendPackedBytes
 
     ChatPacketUDP::HeaderBase* header = (ChatPacketUDP::HeaderBase*)bytes.data();
 
-    qDebug().noquote().nospace() << "Outgoing Datagram -> " << targetAddr.toString() << ":"
-                                 << QString::number(targetPort) << " with msgType = " << header->msgType << Qt::endl;
+    //qDebug().noquote().nospace() << "Outgoing Datagram -> " << targetAddr.toString() << ":"
+    //                             << QString::number(targetPort) << " with msgType = " << header->msgType
+    //                                                            << ", packetSize = " << header->packetSize
+    //                                                            << Qt::endl;
 
     return true;
 }
