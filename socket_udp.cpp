@@ -7,7 +7,6 @@
 #include <QHostAddress>
 #include <QNetworkDatagram>
 #include <QAbstractSocket>
-#include <QTimer>
 #include <QDebug>
 
 
@@ -80,6 +79,15 @@ bool SocketUDP::SendPackedBytes
                           QHostAddress targetAddr,
                           quint16 targetPort)
 {
+    /*
+    char buffer[4096] = {0};
+    for (int i = 0; i < bytes.size(); i++)
+    {
+        sprintf(&buffer[i], "%02X", bytes.data()[i]);
+    }
+    qDebug() << buffer << Qt::endl;
+    */
+
     // 确认为单包
     if (bytes.size() > this->maxPayloadSize)
     {
@@ -88,10 +96,12 @@ bool SocketUDP::SendPackedBytes
         return false;
     }
 
+
     // 延时
-    while (QTime::currentTime() <= this->timeToNextSend())
+    while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - this->timeLastSent).count() < this->waitToSendMs)
     {
         // do nothing but wait
+        // qDebug() <<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - this->timeLastSent).count() << Qt::endl;
     }
 
     // 发送
@@ -101,7 +111,7 @@ bool SocketUDP::SendPackedBytes
         return false;
     }
 
-    this->timeLastSent = QTime::currentTime();
+    this->timeLastSent = std::chrono::steady_clock::now();
 
     ChatPacketUDP::HeaderBase* header = (ChatPacketUDP::HeaderBase*)bytes.data();
 

@@ -4,9 +4,10 @@
 #include <QObject>
 #include <QQueue>
 #include <QThread>
-#include <QTime>
 #include <QUdpSocket>
 #include <QHostAddress>
+
+#include <chrono>
 
 #include "chat_packet_udp.h"
 
@@ -29,9 +30,8 @@ private:
     // For macOS, 8192 bytes is at most.
     const quint16 maxPayloadSize = 8192;
 
-    QTime timeLastSent = QTime::currentTime();
-    quint16 waitToSendMs = 1;
-    QTime timeToNextSend() { return this->timeLastSent.addMSecs(this->waitToSendMs); }
+    std::chrono::steady_clock::time_point timeLastSent = std::chrono::steady_clock::now();
+    double waitToSendMs = 0.5;
 
     // 本机信息
     QHostAddress thisAddr;
@@ -62,9 +62,6 @@ public:
 
     bool SendPackedBytes(QByteArray& bytesPacked, QHostAddress targetAddr, quint16 targetPort);
     bool SendPackedBytes(QByteArray& bytesPacked);
-
-    quint16 WaitToSendMs() { return this->waitToSendMs; }
-    void SetWaitToSendMs(quint16 ms) { this->waitToSendMs = ms; }
 };
 
 

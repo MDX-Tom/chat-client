@@ -7,7 +7,6 @@
 
 #include <QFile>
 #include <QFileInfo>
-#include <QTimer>
 #include <QDateTime>
 // #include <QCryptographicHash>
 #include <QMessageBox>
@@ -202,9 +201,9 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
         // QByteArray sentHash = QCryptographicHash::hash(bytesToSend, QCryptographicHash::Md5);
 
         // 等待回包
-        QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
+        std::chrono::steady_clock::time_point clk = std::chrono::steady_clock::now();
         bool ackValid = false;
-        while (QTime::currentTime() < dieTime)
+        while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - clk).count() < this->waitForReplyMs)
         {
             // 校验收到的包
             if (this->ackPacketSeq == header.packetSeq)
@@ -311,9 +310,10 @@ bool ChatClient::SendFile
 
             while (++retrySeq <= this->retryCountMax)
             {
+                packetLost = 0;
                 // 首先等待当前包ack收到或超时
-                QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
-                while (QTime::currentTime() <= dieTime)
+                std::chrono::steady_clock::time_point clk = std::chrono::steady_clock::now();
+                while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - clk).count() < this->waitForReplyMs)
                 {
                     if (this->ackValid[i])
                     {
@@ -342,14 +342,20 @@ bool ChatClient::SendFile
                 }
 
                 qDebug().noquote().nospace() << "文件分片: " << i << ", 第" << retrySeq << "轮重传: " << packetLost << "包" << Qt::endl;
-                packetLost = 0;
             }
 
             // 重传超过最大轮数
             if (packetLost)
             {
-                throw QString("\n\n网络错误：连接超时。\n重传次数已达：") + QString::number(this->retryCountMax);
-                return false;
+                if (!this->forceSendFileFinish)
+                {
+                    throw QString("\n\n网络错误：连接超时。\n重传次数已达：") + QString::number(this->retryCountMax);
+                    return false;
+                }
+                else
+                {
+                    qDebug() << "网络错误：连接超时。重传次数已达：" + QString::number(this->retryCountMax) << Qt::endl;
+                }
             }
         }
 
@@ -369,6 +375,8 @@ bool ChatClient::SendFile
     QByteArray bytesPacket;
     header.packetCountCurrent = header.packetCountTotal + 1;
     header.packetSeq = this->sendPacketSeq++;
+    this->packetSeq2i[header.packetSeq] = header.packetCountCurrent;
+
     header.packetSize = sizeof(header) + header.fileNameLength;
     bytesPacket.resize(header.packetSize);
     memcpy(bytesPacket.data(), &header, sizeof(header));
@@ -381,8 +389,8 @@ bool ChatClient::SendFile
     {
         this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
 
-        QTime dieTime = QTime::currentTime().addMSecs(this->waitForReplyMs);
-        while (QTime::currentTime() <= dieTime)
+        std::chrono::steady_clock::time_point clk = std::chrono::steady_clock::now();
+        while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - clk).count() < this->waitForReplyMs)
         {
             if (this->ackValid[header.packetCountCurrent])
             {
@@ -454,7 +462,8 @@ void ChatClient::UDPReceiveHandler()
     {
         ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)dataBytes.data();
 
-        this->ackPacketSeq = ackHeader.packetSeq;
+        // Obsolete:
+        // this->ackPacketSeq = ackHeader.packetSeq;
 
         if (this->isSendingFile)
         {
@@ -875,7 +884,7 @@ void ChatClient::sendFile()
         catch (QString errorString)
         {
             qDebug() << "ERROR: " << errorString << Qt::endl;
-            QMessageBox::critical(nullptr, "发送失败：网络错误",  "发送失败！\n" + errorString);
+            //QMessageBox::critical(nullptr, "发送失败：网络错误",  "发送失败！\n" + errorString);
             return;
         }
     });
