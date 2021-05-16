@@ -98,7 +98,7 @@ bool SocketUDP::SendPackedBytes
 
 
     // 延时
-    while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - this->timeLastSent).count() < this->waitToSendMs)
+    while (std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now() - this->timeLastSent).count() < this->waitToSendUs)
     {
         // do nothing but wait
         // qDebug() <<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - this->timeLastSent).count() << Qt::endl;

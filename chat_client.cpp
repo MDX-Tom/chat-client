@@ -252,8 +252,8 @@ bool ChatClient::SendFile
     }
 
     // 计算分包个数
-    qint64 bytesTotal = file.size(); // 文件总字节数
-    if (bytesTotal >= INT32_MAX)
+    quint64 bytesTotal = file.size(); // 文件总字节数
+    if (bytesTotal >= UINT32_MAX)
     {
         throw "文件过大，最大只支持4GB...";
         file.close();
@@ -317,7 +317,7 @@ bool ChatClient::SendFile
                 {
                     if (this->ackValid[i])
                     {
-                        break;
+                        // break;
                     }
                 }
 

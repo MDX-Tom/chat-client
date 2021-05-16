@@ -27,11 +27,11 @@ private:
     bool forceSendFileFinish = true;
 
     // 超时重传等待时间
-    double waitForReplyMs = 200; // 可以添加自适应算法
+    double waitForReplyMs = 80; // 可以添加自适应算法
     // 超时重传次数
-    const quint8 retryCountMax = 10;
+    const quint8 retryCountMax = 15;
     // 发多少个包等待ACK
-    quint16 waitForReplyCount = 250; // 可以添加自适应算法，< 65535
+    quint16 waitForReplyCount = 165; // 可以添加自适应算法，< 65535
 
     // 收到的ACK哈希值
     // QByteArray receivedACKHash;

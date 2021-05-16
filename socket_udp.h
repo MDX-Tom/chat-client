@@ -31,7 +31,7 @@ private:
     const quint16 maxPayloadSize = 8192;
 
     std::chrono::steady_clock::time_point timeLastSent = std::chrono::steady_clock::now();
-    double waitToSendMs = 0.5;
+    double waitToSendUs = 500;
 
     // 本机信息
     QHostAddress thisAddr;
