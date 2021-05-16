@@ -174,7 +174,7 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
     header.fromUserID = this->user->getID();
     header.targetUserID = targetUserID;
 
-    header.packetSeq = this->sendPacketSeq++;
+    header.textPacketSeq = this->sendPacketSeq++;
 
     // 打包Header
     QByteArray bytesToSend;
@@ -206,7 +206,7 @@ bool ChatClient::SendText(QString Text, quint16 targetUserID)
         while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - clk).count() < this->waitForReplyMs)
         {
             // 校验收到的包
-            if (this->ackPacketSeq == header.packetSeq)
+            if (this->ackPacketSeq == header.textPacketSeq)
             {
                 ackValid = true;
                 break;
@@ -245,7 +245,7 @@ bool ChatClient::SendFile
     fileInfo.setFile(fileNameWithPath);
     QByteArray fileNameBytes = fileInfo.fileName().toLocal8Bit();
     qDebug().noquote() << "Selected file: " << fileNameBytes << Qt::endl;
-    if (fileNameBytes.size() >= __UINT8_MAX__)
+    if (fileNameBytes.size() >= UINT8_MAX)
     {
         throw "文件名太长！";
         return false;
@@ -265,7 +265,6 @@ bool ChatClient::SendFile
     quint32 packetCountTotal = bytesTotal / bytesCountPerPacket + 1; // 分包数量
 
     //-----------------------------------------开始发送-------------------------------------------
-    this->isSendingFile = true;
 
     // 处理包头
     ChatPacketUDP::FileMsgHeader header;
@@ -275,6 +274,27 @@ bool ChatClient::SendFile
     header.fileNameLength = fileNameBytes.size();
     header.packetCountTotal = packetCountTotal;
 
+    if (this->preloadFile)
+    {
+        // 预读取所有数据到内存
+        for (quint32 i = 1; i <= packetCountTotal; i++)
+        {
+            header.packetCountCurrent = i;
+
+            // 打包Header、FileName、Payload
+            QByteArray bytesPacket;
+            QByteArray bytesFile = file.read(bytesCountPerPacket);
+            header.packetSize = sizeof(header) + header.fileNameLength + bytesFile.size(); // 实际读取的字节数更新包长度
+            bytesPacket.resize(header.packetSize);
+            memcpy(bytesPacket.data(), &header, sizeof(header));
+            memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
+            memcpy(bytesPacket.data() + sizeof(header) + header.fileNameLength, bytesFile.data(), bytesFile.size());
+
+            this->filePacketBytes[i] = bytesPacket;
+            this->ackValid[i] = false;
+        }
+    }
+
     // 分包发送
     for (quint32 i = 1; i <= packetCountTotal; i++)
     {
@@ -282,23 +302,26 @@ bool ChatClient::SendFile
                     packetCountTotal % this->waitForReplyCount :
                     this->waitForReplyCount;
 
-        header.packetCountCurrent = i;
-        header.packetSeq = this->sendPacketSeq++;
-        this->packetSeq2i[header.packetSeq] = i;
+        // 如果没有预取，每个包都现场读取文件
+        if (!this->preloadFile)
+        {
+            header.packetCountCurrent = i;
 
-        // 打包Header、FileName、Payload
-        QByteArray bytesPacket;
-        QByteArray bytesFile = file.read(bytesCountPerPacket);
-        header.packetSize = sizeof(header) + header.fileNameLength + bytesFile.size(); // 实际读取的字节数更新包长度
-        bytesPacket.resize(header.packetSize);
-        memcpy(bytesPacket.data(), &header, sizeof(header));
-        memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
-        memcpy(bytesPacket.data() + sizeof(header) + header.fileNameLength, bytesFile.data(), bytesFile.size());
+            // 打包Header、FileName、Payload
+            QByteArray bytesPacket;
+            QByteArray bytesFile = file.read(bytesCountPerPacket);
+            header.packetSize = sizeof(header) + header.fileNameLength + bytesFile.size(); // 实际读取的字节数更新包长度
+            bytesPacket.resize(header.packetSize);
+            memcpy(bytesPacket.data(), &header, sizeof(header));
+            memcpy(bytesPacket.data() + sizeof(header), fileNameBytes.data(), header.fileNameLength);
+            memcpy(bytesPacket.data() + sizeof(header) + header.fileNameLength, bytesFile.data(), bytesFile.size());
+
+            this->filePacketBytes[i] = bytesPacket;
+            this->ackValid[i] = false;
+        }
 
         // 发送当前包
-        this->filePacketBytes[i] = bytesPacket;
-        this->ackValid[i] = false;
-        this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
+        this->socketUDP->SendPackedBytes(this->filePacketBytes[i], targetAddr, targetPort);
 
         // 发送后的判断
         if (i % waitForReplyCount == 0 || i == packetCountTotal)
@@ -324,14 +347,12 @@ bool ChatClient::SendFile
                 // 然后对所有包进行选择重传
                 for (quint32 j = i - waitForReplyCount + 1; j <= i; j++)
                 {
-                    if (this->ackValid[j])
+                    if (!this->ackValid[j])
                     {
-                        continue;
+                        // 对没有收到ack的包再发一次，并等待下一轮进行判断
+                        packetLost++;
+                        this->socketUDP->SendPackedBytes(this->filePacketBytes[j], targetAddr, targetPort);
                     }
-
-                    // 对没有收到ack的包再发一次，并等待下一轮进行判断
-                    packetLost++;
-                    this->socketUDP->SendPackedBytes(this->filePacketBytes[j], targetAddr, targetPort);
                 }
 
                 // 本轮全部ack，退出重传循环
@@ -365,17 +386,18 @@ bool ChatClient::SendFile
             int progress = 100 * i / packetCountTotal;
             emit this->sendFileProgress(progress);
 
-            this->packetSeq2i.clear();
-            this->filePacketBytes.clear();
-            this->ackValid.clear();
+            // 不进行预加载时，每一轮ACK后均清除内存区域以节省内存空间
+            if (!this->preloadFile)
+            {
+                this->filePacketBytes.clear();
+                this->ackValid.clear();
+            }
         }
     }
 
     // 发送文件结束包
     QByteArray bytesPacket;
     header.packetCountCurrent = header.packetCountTotal + 1;
-    header.packetSeq = this->sendPacketSeq++;
-    this->packetSeq2i[header.packetSeq] = header.packetCountCurrent;
 
     header.packetSize = sizeof(header) + header.fileNameLength;
     bytesPacket.resize(header.packetSize);
@@ -384,11 +406,11 @@ bool ChatClient::SendFile
 
     this->ackValid[header.packetCountCurrent] = false;
 
+    this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
+
     quint8 retrySeq = 0;
     while (++retrySeq <= this->retryCountMax)
     {
-        this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
-
         std::chrono::steady_clock::time_point clk = std::chrono::steady_clock::now();
         while (std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now() - clk).count() < this->waitForReplyMs)
         {
@@ -402,12 +424,12 @@ bool ChatClient::SendFile
         {
             break;
         }
+
+        this->socketUDP->SendPackedBytes(bytesPacket, targetAddr, targetPort);
     }
 
-    this->isSendingFile = false;
     file.close();
 
-    this->packetSeq2i.clear();
     this->filePacketBytes.clear();
     this->ackValid.clear();
 
@@ -458,17 +480,23 @@ void ChatClient::UDPReceiveHandler()
     QByteArray dataBytes = this->socketUDP->GetReceivedData();
 
     //
-    if (ChatPacketUDP::isPacketReplyMsg(dataBytes))
+    if (ChatPacketUDP::isFilePacketReplyMsg(dataBytes))
     {
-        ChatPacketUDP::PacketReplyHeader ackHeader = *(ChatPacketUDP::PacketReplyHeader*)dataBytes.data();
+        ChatPacketUDP::FilePacketReplyHeader ackHeader = *(ChatPacketUDP::FilePacketReplyHeader*)dataBytes.data();
 
-        // Obsolete:
-        // this->ackPacketSeq = ackHeader.packetSeq;
+        this->ackValid[ackHeader.filePacketSeq] = true;
 
-        if (this->isSendingFile)
-        {
-            this->ackValid[this->packetSeq2i[ackHeader.packetSeq]] = true;
-        }
+        // Obsolete: Check MD5 Hash
+        // this.receivedACKHash.resize(16)
+        // memcpy(this->receivedACKHash.data(), ackHeader.md5Hash, 16);
+    }
+
+    //
+    else if (ChatPacketUDP::isTextPacketReplyMsg(dataBytes))
+    {
+        ChatPacketUDP::TextPacketReplyHeader ackHeader = *(ChatPacketUDP::TextPacketReplyHeader*)dataBytes.data();
+
+        this->ackPacketSeq = ackHeader.textPacketSeq;
 
         // Obsolete: Check MD5 Hash
         // this.receivedACKHash.resize(16)

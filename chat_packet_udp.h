@@ -24,7 +24,8 @@ public:
 
     enum ServerMsgType
     {
-        MSG_SERVER_ACK = 11, // Reliable UDP
+        MSG_SERVER_ACK_TEXT = 11, // Reliable UDP
+        MSG_SERVER_ACK_FILE = 12,
 
         CHAT_CONTENT_SERVER = 21,
 
@@ -83,7 +84,7 @@ public:
         const quint8 contentType = ChatContentType::TEXT;
         // BLANK BYTE
 
-        quint16 packetSeq;
+        quint16 textPacketSeq;
     };
 
     struct FileMsgHeader
@@ -96,11 +97,8 @@ public:
         quint16 fromUserID;
         quint16 targetUserID;
         const quint8 contentType = ChatContentType::FILE;
-        // BLACK BYTE
 
-        quint16 packetSeq;
         quint8 fileNameLength;
-        // BLANK BYTE
 
         // 分包信息
         quint32 packetCountTotal;
@@ -121,16 +119,28 @@ public:
 
     //------------------------SERVER HEADERS-------------------------//
 
-    struct PacketReplyHeader
+    struct TextPacketReplyHeader
     {
-        const quint16 headerSize = sizeof(PacketReplyHeader);
-        const quint16 packetSize = sizeof(PacketReplyHeader);
-        const quint8 msgType = ServerMsgType::MSG_SERVER_ACK;
+        const quint16 headerSize = sizeof(TextPacketReplyHeader);
+        const quint16 packetSize = sizeof(TextPacketReplyHeader);
+        const quint8 msgType = ServerMsgType::MSG_SERVER_ACK_TEXT;
 
         // const quint8 placeHolder = 0; // 字节对齐
         // unsigned char md5Hash[16];
 
-        quint16 packetSeq = 0;
+        quint16 textPacketSeq = 0;
+    };
+
+    struct FilePacketReplyHeader
+    {
+        const quint16 headerSize = sizeof(FilePacketReplyHeader);
+        const quint16 packetSize = sizeof(FilePacketReplyHeader);
+        const quint8 msgType = ServerMsgType::MSG_SERVER_ACK_FILE;
+
+        // const quint8 placeHolder = 0; // 字节对齐
+        // unsigned char md5Hash[16];
+
+        quint32 filePacketSeq = 0;
     };
 
     struct LoginReplyHeader
@@ -180,13 +190,18 @@ public:
 
     //------------------------HEADER FUNCTIONS-------------------------//
 
-    static bool isPacketReplyMsg(QByteArray& bytes)
+    static bool isTextPacketReplyMsg(QByteArray& bytes)
     {
         HeaderBase headerBase = *(HeaderBase*)bytes.data();
-        return (headerBase.msgType == ServerMsgType::MSG_SERVER_ACK &&
-                headerBase.packetSize == sizeof(PacketReplyHeader) &&
-                headerBase.headerSize == sizeof(PacketReplyHeader));
+        return (headerBase.msgType == ServerMsgType::MSG_SERVER_ACK_TEXT);
     }
+
+    static bool isFilePacketReplyMsg(QByteArray& bytes)
+    {
+        HeaderBase headerBase = *(HeaderBase*)bytes.data();
+        return (headerBase.msgType == ServerMsgType::MSG_SERVER_ACK_FILE);
+    }
+
 
     static bool isLoginReplyMsg(QByteArray& bytes)
     {
